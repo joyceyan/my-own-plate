@@ -1,0 +1,4 @@
+experiment	cal_mae_pct	protein_mae_pct	fat_mae_pct	carbs_mae_pct	avg_mae_pct	parse_failures	status	description
+0	59.6	54.5	74.3	90.0	69.6	6	baseline	LoRA r16 a1.0 lr1e-5 3ep attn-only
+1	-	-	-	-	-	20/20	reverted	lr1e-4: repetitive ingredient loops, 100% parse failure
+2	-	-	-	-	-	20/20	reverted	lr5e-5: same repetitive loops as exp 1

@@ -216,3 +216,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Project-specific
+training/output/
+training/eval_results/
+training/logs/
+data/nutrition5k_hf/
+data/nutrition5k_all.jsonl
+data/nutrition5k_train.jsonl
+data/nutrition5k_validation.jsonl
+data/nutrition5k_test.jsonl
+.DS_Store
