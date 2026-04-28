@@ -8,3 +8,4 @@ experiment	cal_mae_pct	protein_mae_pct	fat_mae_pct	carbs_mae_pct	avg_mae_pct	par
 6	62.5	64.1	68.1	71.8	66.6	0	kept	nutrients-only completion, lr1e-5 5ep: fat-6pp carbs-18pp, 0 parse fail (protein+9.6pp)
 7	63.2	57.6	74.0	81.7	69.1	0	reverted	warmup+cosine peak5e-5 5ep nutrients-only: protein better but fat+carbs regressed
 8	68.6	60.0	74.5	76.5	69.9	0	reverted	20ep AdamW wd=0.01 warmup+cosine lr1e-5: weight decay eroded adapter weights
+9	58.6	68.6	63.5	71.4	65.5	2	kept	20ep Adam constant lr1e-5 nutrients-only: best avg! cal-3.9pp fat-4.6pp

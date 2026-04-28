@@ -29,18 +29,19 @@ Key observations:
 
 ## Ideas queue
 
-**Priority 1 — longer training (no weight decay!):**
-- 20 epochs, Adam (no weight decay), constant lr=1e-5 — isolate the effect of longer training without the harmful weight decay from exp 8. Weight decay on LoRA erodes adaptation.
-- Muon optimizer, 20 epochs — different optimization dynamics may break the plateau
+**Priority 1 — push further on long training (20ep gave 65.5%):**
+- 40 epochs, Adam, constant lr=1e-5 — if 20 is better than 5, 40 may be better still (~6 hrs)
+- Muon optimizer, 20 epochs — different optimization dynamics may help protein
+- Rank 64 + 20 epochs — more capacity with proven training duration
 
-**Priority 2 — capacity + long training:**
-- Rank 64 + 20 epochs + Adam — more capacity with enough training time
-- LoRA on MLP layers — attention-only may lack capacity for numerical regression
+**Priority 2 — structural changes:**
+- LoRA on MLP layers (gate/up/down_proj) — attention-only may lack capacity for numerical regression, especially protein
+- Image resize to 512x512 — more visual detail
+- Round nutrient values to integers (fewer tokens to predict, reduce entropy)
 
 **Priority 3 — speculative:**
-- Image resize to 512x512 — more visual detail
 - Gradient accumulation (effective batch 4-8)
-- Round nutrient values to integers (reduce token entropy)
+- Data augmentation
 
 ## Experiment log
 
@@ -115,6 +116,14 @@ See baseline section above. This is the starting point for all comparisons.
 **Result**: 68.6/60.0/74.5/76.5 = **69.9% avg** — worse than exp 6 (66.6%). Despite 4x more training.
 
 **Insight**: **Weight decay on LoRA adapters is counterproductive.** LoRA weights initialize at zero (no adaptation). Weight decay pushes them back toward zero, actively undoing fine-tuning. Combined with cosine LR decay to near-zero, the model lost most of its adaptation by epoch 20. **Never use weight decay on LoRA.** Next: try 20 epochs with plain Adam, constant LR.
+
+### Exp 9: 20 epochs, Adam, constant lr=1e-5, nutrients-only — KEPT
+
+**Hypothesis**: Pure longer training (4x exp 6's 5 epochs) with the same Adam optimizer should help.
+
+**Result**: 58.6/68.6/63.5/71.4 = **65.5% avg** — new best! Calories -3.9pp, fat -4.6pp, carbs -0.4pp improved vs exp 6. Protein +4.5pp worse (within 5pp threshold). Parse failures: 2 (minimal). Training took 179 min (~3 hrs).
+
+**Insight**: Longer training definitively helps — 20 epochs is better than 5 at the same LR. The model continues to learn beyond the 0.242 val loss plateau (MAE% improves even though loss doesn't change). Protein is the persistent weak point; it trades off with fat and calories. Next: try even longer (40 epochs), or try Muon optimizer, or increase rank.
 
 ### Data change: Cap ingredients at 5 (pre-exp 3)
 
