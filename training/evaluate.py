@@ -183,19 +183,33 @@ def parse_completion(raw: str):
             if json_str.count('{') > json_str.count('}'):
                 json_str += '}'
             parsed = json.loads(json_str)
+            # Flatten nested dicts (e.g. {"nutritional_content": {"calories": 100}})
+            flat = {}
+            for k, v in parsed.items():
+                if isinstance(v, dict):
+                    flat.update(v)
+                else:
+                    flat[k] = v
             result = {}
             for k in NUTRIENTS:
-                if k in parsed:
-                    result[k] = float(parsed[k])
+                # Exact match first, then prefix match for keys like "calories (kcal)"
+                if k in flat:
+                    result[k] = float(flat[k])
+                else:
+                    for fk, fv in flat.items():
+                        if fk.lower().startswith(k):
+                            result[k] = float(fv)
+                            break
             if len(result) == len(NUTRIENTS):
                 return result, False
     except (json.JSONDecodeError, ValueError, TypeError):
         pass
 
     # Regex fallback: extract "key": number patterns
+    # Handles keys with unit suffixes like "calories (kcal)" or "protein (g)"
     result = {}
     for nutrient in NUTRIENTS:
-        pattern = rf'["\']?{nutrient}["\']?\s*[:=]\s*([0-9]+(?:\.[0-9]+)?)'
+        pattern = rf'["\']?{nutrient}[^"\']*?["\']?\s*[:=]\s*([0-9]+(?:\.[0-9]+)?)'
         m = re.search(pattern, raw, re.IGNORECASE)
         if m:
             result[nutrient] = float(m.group(1))

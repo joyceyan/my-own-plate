@@ -9,3 +9,6 @@ experiment	cal_mae_pct	protein_mae_pct	fat_mae_pct	carbs_mae_pct	avg_mae_pct	par
 7	63.2	57.6	74.0	81.7	69.1	0	reverted	warmup+cosine peak5e-5 5ep nutrients-only: protein better but fat+carbs regressed
 8	68.6	60.0	74.5	76.5	69.9	0	reverted	20ep AdamW wd=0.01 warmup+cosine lr1e-5: weight decay eroded adapter weights
 9	58.6	68.6	63.5	71.4	65.5	2	kept	20ep Adam constant lr1e-5 nutrients-only: best avg! cal-3.9pp fat-4.6pp
+10	-	-	-	-	-	100/151	reverted	40ep Adam lr1e-5: catastrophic forgetting, CSS/gibberish output
+11	-	-	-	-	-	crash	reverted	Muon lr1e-3 20ep: UnicodeDecodeError, weights corrupted
+12	66.5	78.9	99.6	89.0	83.5	11	reverted	P1 640x480 native res: dramatically worse, train/eval resolution mismatch suspected

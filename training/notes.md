@@ -29,19 +29,26 @@ Key observations:
 
 ## Ideas queue
 
-**Priority 1 — push further on long training (20ep gave 65.5%):**
-- 40 epochs, Adam, constant lr=1e-5 — if 20 is better than 5, 40 may be better still (~6 hrs)
-- Muon optimizer, 20 epochs — different optimization dynamics may help protein
-- Rank 64 + 20 epochs — more capacity with proven training duration
+**This is a vision-bottlenecked task.** Prioritize image pipeline and module selection over LLM-side tuning.
 
-**Priority 2 — structural changes:**
-- LoRA on MLP layers (gate/up/down_proj) — attention-only may lack capacity for numerical regression, especially protein
-- Image resize to 512x512 — more visual detail
-- Round nutrient values to integers (fewer tokens to predict, reduce entropy)
+### P1 — IMAGE PIPELINE (needs investigation before more experiments)
+- **image_resize_shape** in VisionDataset may not affect vision encoder input — exp 12 showed identical training speed/mem at 640x480 vs 384x384, suggesting the processor normalizes to the same size. Need to verify what VisionDataset actually does vs what mlx_vlm.generate() does at eval time.
+- Any resolution experiment is blocked until train/eval pipeline is understood.
 
-**Priority 3 — speculative:**
-- Gradient accumulation (effective batch 4-8)
-- Data augmentation
+### P2 — WHICH MODULES TO ADAPT (next to try)
+Currently: attention q/k/v/o_proj only on LLM. This is the immediate next experiment.
+- **Add MLP layers** (gate/up/down_proj) to LLM LoRA — needed for numerical regression
+- Ablation: MLP-only vs attn+MLP
+
+### P3 — TRAINING DYNAMICS (settled for now)
+- Adam lr=1e-5, 20 epochs is current best
+- 40ep constant LR = catastrophic forgetting (exp 10)
+- Muon = weight corruption (exp 11)
+- AdamW weight decay = erodes LoRA (exp 8)
+- 100ep with cosine decay still untested — try after P2
+
+### P4 — LORA RANK / ALPHA (after P2)
+- r∈{8,16,32}, alpha∈{16,32}, dropout∈{0,0.05}
 
 ## Experiment log
 
@@ -124,6 +131,22 @@ See baseline section above. This is the starting point for all comparisons.
 **Result**: 58.6/68.6/63.5/71.4 = **65.5% avg** — new best! Calories -3.9pp, fat -4.6pp, carbs -0.4pp improved vs exp 6. Protein +4.5pp worse (within 5pp threshold). Parse failures: 2 (minimal). Training took 179 min (~3 hrs).
 
 **Insight**: Longer training definitively helps — 20 epochs is better than 5 at the same LR. The model continues to learn beyond the 0.242 val loss plateau (MAE% improves even though loss doesn't change). Protein is the persistent weak point; it trades off with fat and calories. Next: try even longer (40 epochs), or try Muon optimizer, or increase rank.
+
+### Exp 10: 40 epochs, Adam, constant lr=1e-5 — REVERTED
+
+**Result**: Catastrophic forgetting. CSS garbage output, 66% parse failure. 20 epochs is the ceiling for constant LR.
+
+### Exp 11: Muon optimizer, lr=1e-3, 20 epochs — REVERTED
+
+**Result**: UnicodeDecodeError — weights corrupted. Muon lr=1e-3 too aggressive for LoRA.
+
+### Exp 12: P1 native resolution 640x480, 20 epochs — REVERTED
+
+**Hypothesis**: 384x384 loses 52% of pixels and destroys 4:3 aspect ratio. Native 640x480 should give 2x more visual tokens.
+
+**Result**: 66.5/78.9/99.6/89.0 = **83.5% avg** — dramatically worse than exp 9 (65.5%). 11 parse failures. Training speed and memory were IDENTICAL to 384x384, suggesting VisionDataset's image_resize_shape doesn't actually change what the vision encoder receives.
+
+**Insight**: The image pipeline needs deeper investigation before resolution experiments. VisionDataset may pre-resize to 384x384, and mlx_vlm.generate() (used at eval) uses the processor's dynamic resolution. There may be a persistent train/eval resolution mismatch. P1 experiments are BLOCKED until the pipeline is understood. Moving to P2 (module selection).
 
 ### Data change: Cap ingredients at 5 (pre-exp 3)
 
