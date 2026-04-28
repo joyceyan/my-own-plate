@@ -29,19 +29,20 @@ Key observations:
 
 ## Ideas queue
 
-**Priority 1 — address the 0.242 loss plateau (fundamental):**
-- **Remove ingredients from completion** — the loss is ~50% spent learning ingredient names, diluting the gradient signal for nutrient values. Make the completion just `{"calories": X, "protein": Y, "fat": Z, "carbs": W}`. This concentrates 100% of the learning on the task we care about. Requires data pipeline change.
-- AdamW with weight decay 0.01 — regularize to reduce the systematic overestimation bias seen in exp 4
+**Priority 1 — fix protein regression (exp 6 baseline: 64.1%):**
+- Higher LR with warmup+cosine — nutrients-only format is much shorter/simpler, so higher LR may be safe now. Try peak 5e-5 with warmup. The shorter completion reduces loop risk.
+- Rank 64 — improved calories in exp 5; with nutrients-only format (no ingredient loops) the format corruption risk is lower
+- AdamW with weight decay 0.01 — regularize the overestimation bias
 
-**Priority 2 — combine what works:**
-- Warmup + cosine decay at peak 1e-5 — use schedule from exp 4 (which fixed format) at safe LR
-- Rank 64 + regularization — rank 64 improved calories (exp 5) but hurt format; add weight decay or lower alpha to compensate
+**Priority 2 — overall improvement:**
+- Combine rank 64 + warmup + cosine + nutrients-only
 - LoRA on MLP layers — attention-only may lack capacity for numerical regression
+- Image resize to 512x512 — more visual detail
 
 **Priority 3 — speculative:**
-- Image resize to 512x512 — more visual detail
 - Gradient accumulation (effective batch 4-8)
 - Data augmentation
+- Round nutrient values to integers in training data (reduce token entropy)
 
 ## Experiment log
 
@@ -91,6 +92,18 @@ See baseline section above. This is the starting point for all comparisons.
 
 **Insight**: The 0.242 plateau is NOT a capacity limitation — rank 64 (4x params) doesn't break it. The plateau likely reflects that ~50% of the completion tokens are ingredient names/JSON structure, diluting the gradient signal for nutrient values. The model efficiently learns the format tokens but has insufficient learning pressure on the actual numbers. **Next: remove ingredients from completion to focus 100% of loss on nutrient prediction.**
 
+### Exp 6: Nutrients-only completion, lr=1e-5, 5 epochs — KEPT
+
+**Hypothesis**: The 0.242 loss plateau is because ~50% of completion tokens are ingredient names. Removing ingredients focuses 100% of the gradient signal on nutrient values.
+
+**Data change**: Removed ingredients from completion format. New completion: `{"calories": X, "protein": Y, "fat": Z, "carbs": W}`. New prompt: "Estimate the nutritional content of this food image. Respond as JSON with keys: calories (kcal), protein (g), fat (g), carbs (g)." Re-ran full data pipeline.
+
+**Result**: 62.5/64.1/68.1/71.8 = **66.6% avg** — best so far! Fat improved 6.2pp (74.3→68.1%), carbs improved **18.2pp** (90.0→71.8%). Zero parse failures (vs 6 in exp 0). But protein degraded 9.6pp (54.5→64.1%) and calories slightly worse (+2.9pp).
+
+**Training notes**: Val loss still converges to 0.242 despite the shorter completion — the plateau is inherent to the optimization, not the format. Training took 45.9 min. Eval took only 10.2 min (shorter outputs).
+
+**Insight**: Removing ingredients was the most impactful single change so far. Fat and carbs dramatically improved, suggesting the model was spending LoRA capacity on ingredient token prediction instead of nutrient regression. The protein degradation needs investigation — possibly the model traded protein accuracy for fat/carbs. Zero parse failures confirms the shorter format is much more robust. **This is the new baseline for all future experiments.**
+
 ### Data change: Cap ingredients at 5 (pre-exp 3)
 
-The repetitive ingredient loop failure in exps 1-2 motivated capping the ingredient list at 5 items in `prepare_nutrition5k.py`. Median dish has 4 ingredients; the long tail (up to 34) creates variable-length output that the model can get stuck looping on. Capping at 5 keeps the output short and focused. **Requires re-running the data pipeline** (`prepare_nutrition5k.py` then `convert_dataset.py`) before the next training run. The baseline numbers (exp 0) were trained on uncapped data, so the next experiment will establish a new baseline with the capped dataset.
+The repetitive ingredient loop failure in exps 1-2 motivated capping the ingredient list at 5 items in `prepare_nutrition5k.py`. Median dish has 4 ingredients; the long tail (up to 34) creates variable-length output that the model can get stuck looping on. Capping at 5 keeps the output short and focused.
