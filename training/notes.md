@@ -29,20 +29,18 @@ Key observations:
 
 ## Ideas queue
 
-**Priority 1 — fix protein regression (exp 6 baseline: 64.1%):**
-- Higher LR with warmup+cosine — nutrients-only format is much shorter/simpler, so higher LR may be safe now. Try peak 5e-5 with warmup. The shorter completion reduces loop risk.
-- Rank 64 — improved calories in exp 5; with nutrients-only format (no ingredient loops) the format corruption risk is lower
-- AdamW with weight decay 0.01 — regularize the overestimation bias
+**Priority 1 — longer training (no weight decay!):**
+- 20 epochs, Adam (no weight decay), constant lr=1e-5 — isolate the effect of longer training without the harmful weight decay from exp 8. Weight decay on LoRA erodes adaptation.
+- Muon optimizer, 20 epochs — different optimization dynamics may break the plateau
 
-**Priority 2 — overall improvement:**
-- Combine rank 64 + warmup + cosine + nutrients-only
+**Priority 2 — capacity + long training:**
+- Rank 64 + 20 epochs + Adam — more capacity with enough training time
 - LoRA on MLP layers — attention-only may lack capacity for numerical regression
-- Image resize to 512x512 — more visual detail
 
 **Priority 3 — speculative:**
+- Image resize to 512x512 — more visual detail
 - Gradient accumulation (effective batch 4-8)
-- Data augmentation
-- Round nutrient values to integers in training data (reduce token entropy)
+- Round nutrient values to integers (reduce token entropy)
 
 ## Experiment log
 
@@ -103,6 +101,20 @@ See baseline section above. This is the starting point for all comparisons.
 **Training notes**: Val loss still converges to 0.242 despite the shorter completion — the plateau is inherent to the optimization, not the format. Training took 45.9 min. Eval took only 10.2 min (shorter outputs).
 
 **Insight**: Removing ingredients was the most impactful single change so far. Fat and carbs dramatically improved, suggesting the model was spending LoRA capacity on ingredient token prediction instead of nutrient regression. The protein degradation needs investigation — possibly the model traded protein accuracy for fat/carbs. Zero parse failures confirms the shorter format is much more robust. **This is the new baseline for all future experiments.**
+
+### Exp 7: Warmup+cosine peak 5e-5, nutrients-only, 5 epochs — REVERTED
+
+**Result**: 63.2/57.6/74.0/81.7 = 69.1% avg. Protein better (-6.5pp) but fat +5.9pp and carbs +9.9pp regressed.
+
+**Insight**: Higher LR shifts learning focus between nutrients. 5 epochs is too short at any LR.
+
+### Exp 8: 20 epochs, AdamW wd=0.01, warmup+cosine lr=1e-5 — REVERTED
+
+**Hypothesis**: Longer training (20 epochs, ~3 hrs) + weight decay regularization should improve predictions.
+
+**Result**: 68.6/60.0/74.5/76.5 = **69.9% avg** — worse than exp 6 (66.6%). Despite 4x more training.
+
+**Insight**: **Weight decay on LoRA adapters is counterproductive.** LoRA weights initialize at zero (no adaptation). Weight decay pushes them back toward zero, actively undoing fine-tuning. Combined with cosine LR decay to near-zero, the model lost most of its adaptation by epoch 20. **Never use weight decay on LoRA.** Next: try 20 epochs with plain Adam, constant LR.
 
 ### Data change: Cap ingredients at 5 (pre-exp 3)
 

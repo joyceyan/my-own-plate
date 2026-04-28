@@ -47,7 +47,7 @@ def parse_args():
         "--output-dir", type=str, default="./output/adapters/adapters.safetensors",
         help="Output path for adapter weights",
     )
-    parser.add_argument("--epochs", type=int, default=5)
+    parser.add_argument("--epochs", type=int, default=20)
     parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--learning-rate", type=float, default=1e-5)
     parser.add_argument("--lora-rank", type=int, default=16)
@@ -60,8 +60,8 @@ def parse_args():
     parser.add_argument("--image-resize", type=int, nargs=2, default=[384, 384],
                         help="Resize images to this shape (default: 384 384)")
     parser.add_argument("--steps-per-report", type=int, default=10)
-    parser.add_argument("--steps-per-eval", type=int, default=200,
-                        help="Run validation every N steps (default: 200)")
+    parser.add_argument("--steps-per-eval", type=int, default=500,
+                        help="Run validation every N steps (default: 500)")
     parser.add_argument("--val-batches", type=int, default=25,
                         help="Number of validation batches per eval (default: 25)")
     parser.add_argument("--val-split", type=str, default="validation",
