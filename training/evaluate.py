@@ -83,7 +83,7 @@ def load_hf_split(dataset_dir: str, split: str = "validation"):
 # Inference backends
 # ---------------------------------------------------------------------------
 
-def load_mlx_model(model_path: str, adapter_path: str = None):
+def load_mlx_model(model_path: str, adapter_path: str = None, lora_rank: int = 16, lora_alpha: float = 1.0):
     """
     Load a VLM via mlx-vlm (keeps vision tower intact).
     model_path: HF repo ID or local dir (base model)
@@ -115,7 +115,7 @@ def load_mlx_model(model_path: str, adapter_path: str = None):
         from mlx_vlm.trainer.utils import get_peft_model
         attn_modules = ["q_proj", "k_proj", "v_proj", "o_proj"]
         # mlx-vlm uses alpha as a raw multiplier (not alpha/rank)
-        model = get_peft_model(model, attn_modules, rank=16, alpha=1.0, dropout=0.0, verbose=False)
+        model = get_peft_model(model, attn_modules, rank=lora_rank, alpha=lora_alpha, dropout=0.0, verbose=False)
         adapter_file = Path(adapter_path) / "adapters.safetensors"
         model.load_weights(str(adapter_file), strict=False)
 
@@ -309,11 +309,12 @@ class EvalAbortError(Exception):
 
 
 def run_eval(samples, model_type, model_path, adapter_path=None,
-             max_parse_failures=20):
+             max_parse_failures=20, lora_rank=16, lora_alpha=1.0):
     """Run inference on all samples. Returns (predictions, parse_failures, failed_log).
     Raises EvalAbortError if parse failures exceed max_parse_failures."""
     if model_type == "mlx":
-        model, processor, config = load_mlx_model(model_path, adapter_path=adapter_path)
+        model, processor, config = load_mlx_model(model_path, adapter_path=adapter_path,
+                                                   lora_rank=lora_rank, lora_alpha=lora_alpha)
         infer_fn = lambda prompt, img: infer_mlx(model, processor, config, prompt, image_path=img)
     else:
         model = load_gguf_model(model_path)
@@ -457,6 +458,10 @@ def parse_args():
         help="Abort eval if parse failures exceed this (default: 20). "
              "Set to 0 to disable.",
     )
+    parser.add_argument("--lora-rank", type=int, default=16,
+                        help="LoRA rank (must match training, default: 16)")
+    parser.add_argument("--lora-alpha", type=float, default=1.0,
+                        help="LoRA alpha (must match training, default: 1.0)")
     return parser.parse_args()
 
 
@@ -500,6 +505,7 @@ def main():
         ft_preds, ft_failures, ft_failed_log = run_eval(
             samples, args.model_type, args.model,
             adapter_path=args.adapter_path, max_parse_failures=max_fail,
+            lora_rank=args.lora_rank, lora_alpha=args.lora_alpha,
         )
     except EvalAbortError as e:
         print(f"\n  ABORTED: {e}")

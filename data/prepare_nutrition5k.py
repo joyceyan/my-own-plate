@@ -30,9 +30,8 @@ SEED = 42
 MAX_INGREDIENTS = 5
 
 PROMPT = (
-    "Identify the ingredients in this image and estimate calories (kcal), protein (g), "
-    "fat (g), and carbohydrates (g). Respond as JSON with keys: ingredients, "
-    "calories, protein, fat, carbs."
+    "Estimate the nutritional content of this food image. "
+    "Respond as JSON with keys: calories (kcal), protein (g), fat (g), carbs (g)."
 )
 
 # ── Ingredient normalization ───────────────────────────────────────────────────
@@ -128,7 +127,6 @@ def load_metadata(csv_path: Path) -> list[dict]:
 def format_completion(record: dict) -> str:
     """Build a structured JSON completion string from a dish record."""
     obj = {
-        "ingredients": ", ".join(record["ingredients"][:MAX_INGREDIENTS]),
         "calories": record["calories"],
         "protein": record["total_protein"],
         "fat": record["total_fat"],

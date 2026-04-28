@@ -1,0 +1,31 @@
+{
+  "source": "Thames et al., Nutrition5k: Towards Automatic Nutritional Understanding of Generic Food, CVPR 2021",
+  "model": "RGB-only direct prediction",
+  "metrics": {
+    "calories": {
+      "mae_absolute": 70.6,
+      "mae_absolute_unit": "kcal",
+      "mae_pct_of_mean": 26.1
+    },
+    "mass": {
+      "mae_absolute": 40.4,
+      "mae_absolute_unit": "g",
+      "mae_pct_of_mean": 18.8
+    },
+    "fat": {
+      "mae_absolute": 5.0,
+      "mae_absolute_unit": "g",
+      "mae_pct_of_mean": 34.2
+    },
+    "carbs": {
+      "mae_absolute": 6.1,
+      "mae_absolute_unit": "g",
+      "mae_pct_of_mean": 31.9
+    },
+    "protein": {
+      "mae_absolute": 5.5,
+      "mae_absolute_unit": "g",
+      "mae_pct_of_mean": 29.5
+    }
+  }
+}

@@ -29,23 +29,19 @@ Key observations:
 
 ## Ideas queue
 
-**Priority 1 — likely high impact:**
-- LR warmup + cosine decay — constant LR at any value >1e-5 causes degenerate repetition. Warmup avoids early destabilization, cosine decay prevents late-stage overfitting. Try peak LR 5e-5 with 10% warmup.
-- More epochs (5-10) at lr=1e-5 — model may simply need more gentle training time
-- Lower LoRA alpha (0.5) — reduce adapter strength to allow higher LR without overwhelming base model
+**Priority 1 — address the 0.242 loss plateau (fundamental):**
+- **Remove ingredients from completion** — the loss is ~50% spent learning ingredient names, diluting the gradient signal for nutrient values. Make the completion just `{"calories": X, "protein": Y, "fat": Z, "carbs": W}`. This concentrates 100% of the learning on the task we care about. Requires data pipeline change.
+- AdamW with weight decay 0.01 — regularize to reduce the systematic overestimation bias seen in exp 4
 
-**Priority 2 — moderate expected impact:**
-- LoRA rank increase (32 or 64) — more capacity for the adapter
-- LoRA alpha tuning — try alpha=2.0 with rank=16 for stronger adapter signal
-- Weight decay via AdamW (1e-2 or 1e-1)
-- Image resize to 512x512 or native aspect ratio — more visual detail
+**Priority 2 — combine what works:**
+- Warmup + cosine decay at peak 1e-5 — use schedule from exp 4 (which fixed format) at safe LR
+- Rank 64 + regularization — rank 64 improved calories (exp 5) but hurt format; add weight decay or lower alpha to compensate
+- LoRA on MLP layers — attention-only may lack capacity for numerical regression
 
 **Priority 3 — speculative:**
-- Expand LoRA to gate_proj/up_proj/down_proj (MLP) — previous attempt caused overfitting, but with proper regularization may help
-- Prompt template changes — add explicit instructions about output format or nutrient ranges
-- Data augmentation — random crops, color jitter during training
-- Gradient accumulation to simulate larger effective batch size
-- Mixed precision / different sequence lengths
+- Image resize to 512x512 — more visual detail
+- Gradient accumulation (effective batch 4-8)
+- Data augmentation
 
 ## Experiment log
 
@@ -70,6 +66,30 @@ See baseline section above. This is the starting point for all comparisons.
 **Result**: Same failure as exp 1 — 20/20 parse failures with identical repetitive ingredient loop patterns. Val loss converged to 0.242 (same as exp 1).
 
 **Insight**: The LR sweet spot between "barely learning" (1e-5) and "degenerate output" (5e-5+) is extremely narrow, if it exists at all. The fundamental issue may be that at any LR high enough to learn, the LoRA adapter overwhelms the base model's generation structure. Next steps: try lr=2e-5 (minimal increase), or add LR warmup + cosine decay to prevent early destabilization, or try lower LoRA alpha (0.5) to reduce adapter strength.
+
+### Exp 3: Learning rate 2e-5 constant — REVERTED
+
+**Hypothesis**: 2e-5 is the minimum LR increase. With ingredient cap, should avoid degenerate loops.
+
+**Result**: 20 parse failures in 120 samples (17% rate), eval aborted. Ingredient loops still occur.
+
+**Insight**: Even 2e-5 constant LR causes format corruption from the early LR shock.
+
+### Exp 4: Warmup + cosine decay, peak 5e-5, 5 epochs — REVERTED
+
+**Hypothesis**: Warmup avoids early LR shock; cosine decay prevents late overfitting.
+
+**Result**: Format fixed (4 parse failures) but predictions worse: 62.5/53.0/75.5/97.8 = **72.2% avg** (baseline 69.6%). Carbs +7.8pp. Model systematically overestimates and has compressed prediction ranges (correlation 0.44-0.71 with ground truth).
+
+**Insight**: Warmup works for format stability. But 5e-5 peak is too aggressive for prediction quality. The 0.242 loss plateau is not breakable with LR changes.
+
+### Exp 5: LoRA rank 64, lr=1e-5, 5 epochs — REVERTED
+
+**Hypothesis**: The 0.242 loss plateau is a capacity limitation with rank 16.
+
+**Result**: 54.9/54.5/73.5/95.3 = **69.6% avg** — same as baseline! Calories improved 4.7pp but carbs degraded 5.3pp. Parse failures increased to 24 (vs 6 baseline). Same 0.242 loss plateau.
+
+**Insight**: The 0.242 plateau is NOT a capacity limitation — rank 64 (4x params) doesn't break it. The plateau likely reflects that ~50% of the completion tokens are ingredient names/JSON structure, diluting the gradient signal for nutrient values. The model efficiently learns the format tokens but has insufficient learning pressure on the actual numbers. **Next: remove ingredients from completion to focus 100% of loss on nutrient prediction.**
 
 ### Data change: Cap ingredients at 5 (pre-exp 3)
 
