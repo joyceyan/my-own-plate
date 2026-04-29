@@ -162,6 +162,18 @@ See baseline section above. This is the starting point for all comparisons.
 
 **Insight**: MLP layers dramatically improve protein and carbs prediction — confirms the hypothesis that attention-only LoRA lacks the computational capacity for numerical regression. Fat regression suggests a trade-off between nutrients with the current capacity (rank 16 may be too low for 7 modules). Next: try higher rank (32) with attn+MLP to give the model more capacity per module. Also need to address fat — possibly the MLP layers are learning a different feature space that's better for protein/carbs but worse for fat.
 
+### Exp 15: 100 epochs cosine decay, attn+MLP — ABANDONED
+
+Disk full at ~50 epochs. 277 checkpoints * 70MB = 18GB consumed all free space. Abandoned; epochs locked to ~10.
+
+### Exp 16: rank 32 with attn+MLP, 10 epochs — KEPT
+
+**Config**: LoRA rank 32 (2x exp 14), alpha 1.0, 7 modules (attn+MLP), Adam lr=1e-5, 10 epochs. Peak mem 4.84 GB, 113 min training.
+
+**Result**: 55.8/59.4/68.4/56.4 = **60.0% avg** — new best! All nutrients improved vs exp 14: calories -3.3pp, fat -3.8pp, carbs -5.6pp. Protein +0.8pp (within threshold). Zero parse failures.
+
+**Insight**: Rank 32 gives a clean 3pp average improvement. The extra capacity per module helps all nutrients, and partially recovers the fat regression from exp 14. Carbs is now the best nutrient at 56.4% (was 90% at exp 0!). Next: try rank 32 with dropout 0.05 for regularization, or try alpha tuning.
+
 ### Data change: Cap ingredients at 5 (pre-exp 3)
 
 The repetitive ingredient loop failure in exps 1-2 motivated capping the ingredient list at 5 items in `prepare_nutrition5k.py`. Median dish has 4 ingredients; the long tail (up to 34) creates variable-length output that the model can get stuck looping on. Capping at 5 keeps the output short and focused.

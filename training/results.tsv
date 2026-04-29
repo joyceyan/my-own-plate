@@ -15,3 +15,4 @@ experiment	cal_mae_pct	protein_mae_pct	fat_mae_pct	carbs_mae_pct	avg_mae_pct	par
 13	-	-	-	-	-	50/116	reverted	P2 attn+MLP 20ep: IndexError+43% parse fail, MLP overfits at 20ep
 14	59.1	58.6	72.2	62.0	63.0	0	kept	P2 attn+MLP 10ep: best avg! protein-10pp carbs-9.4pp (fat+8.7pp)
 15	-	-	-	-	-	disk full	reverted	100ep cosine decay: disk full at 50ep (277 checkpoints * 70MB), abandoned
+16	55.8	59.4	68.4	56.4	60.0	0	kept	P3 rank32 attn+MLP 10ep: best avg! all nutrients improved, fat recovering
