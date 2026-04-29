@@ -38,18 +38,17 @@ Key observations:
 ### P2 — WHICH MODULES TO ADAPT (attn+MLP confirmed, now optimize)
 attn+MLP at 10ep gives 63.0% avg (best). Fat regressed 8.7pp — needs fixing.
 - Higher rank (32) with attn+MLP — rank 16 may be spread too thin across 7 modules
-- 100ep cosine decay with attn+MLP — longer training with LR decay to prevent overfitting
+- LoRA dropout (0.05) — regularize to reduce fat regression
 - Ablation: MLP-only (no attn) to see if MLP is doing the heavy lifting
 
-### P3 — TRAINING DYNAMICS (settled for now)
-- Adam lr=1e-5, 20 epochs is current best
-- 40ep constant LR = catastrophic forgetting (exp 10)
-- Muon = weight corruption (exp 11)
-- AdamW weight decay = erodes LoRA (exp 8)
-- 100ep with cosine decay still untested — try after P2
-
-### P4 — LORA RANK / ALPHA (after P2)
+### P3 — LORA RANK / ALPHA
 - r∈{8,16,32}, alpha∈{16,32}, dropout∈{0,0.05}
+
+### P4 — TRAINING DYNAMICS (settled — locked at ~10 epochs)
+- Adam lr=1e-5, 10 epochs with attn+MLP is current best config
+- 20ep attn-only was previous best (exp 9), but attn+MLP overfits at 20ep
+- Longer runs (>20ep) cause catastrophic forgetting or disk issues
+- steps_per_save increased to 100000 to prevent checkpoint bloat
 
 ## Experiment log
 

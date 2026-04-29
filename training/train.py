@@ -66,7 +66,8 @@ def parse_args():
                         help="Number of validation batches per eval (default: 25)")
     parser.add_argument("--val-split", type=str, default="validation",
                         help="Dataset split to use for validation (default: validation)")
-    parser.add_argument("--steps-per-save", type=int, default=500)
+    parser.add_argument("--steps-per-save", type=int, default=100000,
+                        help="Save checkpoint every N steps (default: 100000 — only final save)")
     parser.add_argument("--no-compile", action="store_true", default=True,
                         help="Disable mx.compile (default: on, prevents Metal timeout)")
     parser.add_argument("--compile", action="store_true",
