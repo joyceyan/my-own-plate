@@ -50,7 +50,7 @@ def parse_args():
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--learning-rate", type=float, default=1e-5)
-    parser.add_argument("--lora-rank", type=int, default=16)
+    parser.add_argument("--lora-rank", type=int, default=32)
     # NOTE: mlx-vlm uses alpha as a raw multiplier (not alpha/rank like HF PEFT).
     # With rank=16, set alpha=1.0 for standard LoRA scaling.
     parser.add_argument("--lora-alpha", type=float, default=1.0)
