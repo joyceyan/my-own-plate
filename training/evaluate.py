@@ -113,9 +113,11 @@ def load_mlx_model(model_path: str, adapter_path: str = None, lora_rank: int = 1
         if ap.exists():
             adapter_path = str(ap.resolve())
         from mlx_vlm.trainer.utils import get_peft_model
-        attn_modules = ["q_proj", "k_proj", "v_proj", "o_proj"]
-        # mlx-vlm uses alpha as a raw multiplier (not alpha/rank)
-        model = get_peft_model(model, attn_modules, rank=lora_rank, alpha=lora_alpha, dropout=0.0, verbose=False)
+        lora_modules = [
+            "q_proj", "k_proj", "v_proj", "o_proj",
+            "gate_proj", "up_proj", "down_proj",
+        ]
+        model = get_peft_model(model, lora_modules, rank=lora_rank, alpha=lora_alpha, dropout=0.0, verbose=False)
         adapter_file = Path(adapter_path) / "adapters.safetensors"
         model.load_weights(str(adapter_file), strict=False)
 
@@ -339,7 +341,10 @@ def run_eval(samples, model_type, model_path, adapter_path=None,
     failed_log = []
 
     for i, sample in enumerate(samples):
-        raw_output = infer_fn(sample["prompt"], sample.get("image_path"))
+        try:
+            raw_output = infer_fn(sample["prompt"], sample.get("image_path"))
+        except Exception as e:
+            raw_output = f"[GENERATION ERROR: {type(e).__name__}: {e}]"
         parsed, failed = parse_completion(raw_output)
 
         if failed:

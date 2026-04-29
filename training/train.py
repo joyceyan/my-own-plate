@@ -47,7 +47,7 @@ def parse_args():
         "--output-dir", type=str, default="./output/adapters/adapters.safetensors",
         help="Output path for adapter weights",
     )
-    parser.add_argument("--epochs", type=int, default=20)
+    parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--learning-rate", type=float, default=1e-5)
     parser.add_argument("--lora-rank", type=int, default=16)
@@ -132,17 +132,16 @@ def main():
         logger.warning(f"No '{args.val_split}' split found — training without validation")
 
     # ------------------------------------------------------------------
-    # Setup LoRA — attention projections only
+    # Setup LoRA — attention + MLP projections
     # ------------------------------------------------------------------
-    # mlx-vlm's default (find_all_linear_names) applies LoRA to ALL linear
-    # layers including MLP, which gives the adapter too much capacity and
-    # causes catastrophic overfitting (the model memorizes the training
-    # prompt and regurgitates it at inference). Restrict to attention only.
     from mlx_vlm.trainer.utils import get_peft_model
-    attn_modules = ["q_proj", "k_proj", "v_proj", "o_proj"]
+    lora_modules = [
+        "q_proj", "k_proj", "v_proj", "o_proj",  # attention
+        "gate_proj", "up_proj", "down_proj",       # MLP (for numerical regression)
+    ]
     model = get_peft_model(
         model,
-        attn_modules,
+        lora_modules,
         rank=args.lora_rank,
         alpha=args.lora_alpha,
         dropout=0.0,
