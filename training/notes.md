@@ -35,10 +35,11 @@ Key observations:
 - **image_resize_shape** in VisionDataset may not affect vision encoder input — exp 12 showed identical training speed/mem at 640x480 vs 384x384, suggesting the processor normalizes to the same size. Need to verify what VisionDataset actually does vs what mlx_vlm.generate() does at eval time.
 - Any resolution experiment is blocked until train/eval pipeline is understood.
 
-### P2 — WHICH MODULES TO ADAPT (next to try)
-Currently: attention q/k/v/o_proj only on LLM. This is the immediate next experiment.
-- **Add MLP layers** (gate/up/down_proj) to LLM LoRA — needed for numerical regression
-- Ablation: MLP-only vs attn+MLP
+### P2 — WHICH MODULES TO ADAPT (attn+MLP confirmed, now optimize)
+attn+MLP at 10ep gives 63.0% avg (best). Fat regressed 8.7pp — needs fixing.
+- Higher rank (32) with attn+MLP — rank 16 may be spread too thin across 7 modules
+- 100ep cosine decay with attn+MLP — longer training with LR decay to prevent overfitting
+- Ablation: MLP-only (no attn) to see if MLP is doing the heavy lifting
 
 ### P3 — TRAINING DYNAMICS (settled for now)
 - Adam lr=1e-5, 20 epochs is current best
@@ -147,6 +148,20 @@ See baseline section above. This is the starting point for all comparisons.
 **Result**: 66.5/78.9/99.6/89.0 = **83.5% avg** — dramatically worse than exp 9 (65.5%). 11 parse failures. Training speed and memory were IDENTICAL to 384x384, suggesting VisionDataset's image_resize_shape doesn't actually change what the vision encoder receives.
 
 **Insight**: The image pipeline needs deeper investigation before resolution experiments. VisionDataset may pre-resize to 384x384, and mlx_vlm.generate() (used at eval) uses the processor's dynamic resolution. There may be a persistent train/eval resolution mismatch. P1 experiments are BLOCKED until the pipeline is understood. Moving to P2 (module selection).
+
+### Exp 13: P2 attn+MLP LoRA, 20 epochs — REVERTED
+
+**Result**: IndexError during eval (invalid token IDs) + 43% parse failure when errors caught. MLP layers overfit at 20 epochs.
+
+### Exp 14: P2 attn+MLP LoRA, 10 epochs — KEPT
+
+**Config**: LoRA on q/k/v/o_proj + gate/up/down_proj (7 modules), rank 16, alpha 1.0, Adam lr=1e-5, 10 epochs. ~1.75x more trainable params than attn-only.
+
+**Result**: 59.1/58.6/72.2/62.0 = **63.0% avg** — new best! Protein improved 10pp (68.6→58.6%), carbs improved 9.4pp (71.4→62.0%). Fat regressed 8.7pp (63.5→72.2%). Zero parse failures. Training took 109 min.
+
+**Parser note**: Model outputs `"kcal"` as key instead of `"calories"`. Added alias-aware parser (NUTRIENT_ALIASES dict) to handle this and other format variations (nested JSON, unit-suffixed keys). This parser improvement is critical for future experiments.
+
+**Insight**: MLP layers dramatically improve protein and carbs prediction — confirms the hypothesis that attention-only LoRA lacks the computational capacity for numerical regression. Fat regression suggests a trade-off between nutrients with the current capacity (rank 16 may be too low for 7 modules). Next: try higher rank (32) with attn+MLP to give the model more capacity per module. Also need to address fat — possibly the MLP layers are learning a different feature space that's better for protein/carbs but worse for fat.
 
 ### Data change: Cap ingredients at 5 (pre-exp 3)
 

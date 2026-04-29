@@ -13,3 +13,4 @@ experiment	cal_mae_pct	protein_mae_pct	fat_mae_pct	carbs_mae_pct	avg_mae_pct	par
 11	-	-	-	-	-	crash	reverted	Muon lr1e-3 20ep: UnicodeDecodeError, weights corrupted
 12	66.5	78.9	99.6	89.0	83.5	11	reverted	P1 640x480 native res: dramatically worse, train/eval resolution mismatch suspected
 13	-	-	-	-	-	50/116	reverted	P2 attn+MLP 20ep: IndexError+43% parse fail, MLP overfits at 20ep
+14	59.1	58.6	72.2	62.0	63.0	0	kept	P2 attn+MLP 10ep: best avg! protein-10pp carbs-9.4pp (fat+8.7pp)

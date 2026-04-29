@@ -167,6 +167,30 @@ def infer_gguf(model, prompt: str, max_tokens: int = 512) -> str:
 # Output parsing
 # ---------------------------------------------------------------------------
 
+NUTRIENT_ALIASES = {
+    "calories": ["calories", "kcal", "cal", "cals", "energy"],
+    "protein": ["protein", "protein_g"],
+    "fat": ["fat", "fat_g", "total_fat"],
+    "carbs": ["carbs", "carb", "carbohydrates", "carbs_g"],
+}
+
+
+def _find_nutrient_in_dict(flat: dict, nutrient: str):
+    """Find a nutrient value in a flattened dict, trying exact match, aliases, and prefix matching."""
+    aliases = NUTRIENT_ALIASES.get(nutrient, [nutrient])
+    # Exact match on aliases
+    for alias in aliases:
+        if alias in flat:
+            return float(flat[alias])
+    # Case-insensitive alias match and prefix match
+    for fk, fv in flat.items():
+        fk_lower = fk.lower().strip()
+        for alias in aliases:
+            if fk_lower == alias or fk_lower.startswith(alias) or alias in fk_lower:
+                return float(fv)
+    return None
+
+
 def parse_completion(raw: str):
     """
     Parse model output as JSON. Falls back to regex extraction on failure.
@@ -176,12 +200,10 @@ def parse_completion(raw: str):
     cleaned = re.sub(r'```(?:json)?\s*', '', raw).strip()
 
     # Try JSON parse first — look for the first { ... } block
-    # Use a greedy match to handle nested structures (e.g. ingredients as array)
     try:
         match = re.search(r'\{.*\}', cleaned, re.DOTALL)
         if match:
             json_str = match.group()
-            # If truncated (no closing brace), try to fix
             if json_str.count('{') > json_str.count('}'):
                 json_str += '}'
             parsed = json.loads(json_str)
@@ -194,27 +216,24 @@ def parse_completion(raw: str):
                     flat[k] = v
             result = {}
             for k in NUTRIENTS:
-                # Exact match first, then prefix match for keys like "calories (kcal)"
-                if k in flat:
-                    result[k] = float(flat[k])
-                else:
-                    for fk, fv in flat.items():
-                        if fk.lower().startswith(k):
-                            result[k] = float(fv)
-                            break
+                val = _find_nutrient_in_dict(flat, k)
+                if val is not None:
+                    result[k] = val
             if len(result) == len(NUTRIENTS):
                 return result, False
     except (json.JSONDecodeError, ValueError, TypeError):
         pass
 
-    # Regex fallback: extract "key": number patterns
-    # Handles keys with unit suffixes like "calories (kcal)" or "protein (g)"
+    # Regex fallback: try all aliases for each nutrient
     result = {}
     for nutrient in NUTRIENTS:
-        pattern = rf'["\']?{nutrient}[^"\']*?["\']?\s*[:=]\s*([0-9]+(?:\.[0-9]+)?)'
-        m = re.search(pattern, raw, re.IGNORECASE)
-        if m:
-            result[nutrient] = float(m.group(1))
+        aliases = NUTRIENT_ALIASES.get(nutrient, [nutrient])
+        for alias in aliases:
+            pattern = rf'["\']?{alias}[^"\']*?["\']?\s*[:=]\s*([0-9]+(?:\.[0-9]+)?)'
+            m = re.search(pattern, raw, re.IGNORECASE)
+            if m:
+                result[nutrient] = float(m.group(1))
+                break
 
     if len(result) == len(NUTRIENTS):
         return result, True  # regex fallback succeeded but JSON failed
