@@ -29,26 +29,30 @@ Key observations:
 
 ## Ideas queue
 
-**This is a vision-bottlenecked task.** Prioritize image pipeline and module selection over LLM-side tuning.
+**Current best: exp 16 — rank 32, alpha 1.0, attn+MLP, Adam lr=1e-5, 10 epochs = 60.0% avg.**
 
-### P1 — IMAGE PIPELINE (needs investigation before more experiments)
-- **image_resize_shape** in VisionDataset may not affect vision encoder input — exp 12 showed identical training speed/mem at 640x480 vs 384x384, suggesting the processor normalizes to the same size. Need to verify what VisionDataset actually does vs what mlx_vlm.generate() does at eval time.
-- Any resolution experiment is blocked until train/eval pipeline is understood.
+5 consecutive experiments (17-21) failed to improve on exp 16. P2/P3/P4 are exhausted. The remaining gap to 30.4% (N5k baseline) likely requires a fundamentally different approach.
 
-### P2 — WHICH MODULES TO ADAPT (attn+MLP confirmed, now optimize)
-attn+MLP at 10ep gives 63.0% avg (best). Fat regressed 8.7pp — needs fixing.
-- Higher rank (32) with attn+MLP — rank 16 may be spread too thin across 7 modules
-- LoRA dropout (0.05) — regularize to reduce fat regression
-- Ablation: MLP-only (no attn) to see if MLP is doing the heavy lifting
+### Key findings (settled — do not re-explore):
+- **Modules**: attn+MLP (7 modules) >> attn-only (4 modules). MLP needed for numerical regression.
+- **Rank**: 32 > 16. More capacity per module helps.
+- **Alpha**: 1.0 is the only working value. 2.0 = corruption, 0.5 = under-adapts.
+- **Dropout**: 0.0 only. 0.05 = corruption.
+- **Epochs**: 10 for attn+MLP. 20+ overfits with MLP layers.
+- **LR**: 1e-5 only. Higher = format corruption, lower (5e-6) = fat collapse.
+- **Optimizer**: Adam only. AdamW/Muon both failed.
+- **Data**: Float nutrients > integer. Nutrients-only > ingredients+nutrients.
 
-### P3 — LORA RANK / ALPHA
-- r∈{8,16,32}, alpha∈{16,32}, dropout∈{0,0.05}
+### What might still help (P1 — image pipeline):
+- Investigate VisionDataset image processing vs mlx_vlm.generate() — there's a train/eval mismatch
+- Understand what resolution the vision encoder actually receives
+- Try passing images differently to ensure train and eval use the same preprocessing
 
-### P4 — TRAINING DYNAMICS (settled — locked at ~10 epochs)
-- Adam lr=1e-5, 10 epochs with attn+MLP is current best config
-- 20ep attn-only was previous best (exp 9), but attn+MLP overfits at 20ep
-- Longer runs (>20ep) cause catastrophic forgetting or disk issues
-- steps_per_save increased to 100000 to prevent checkpoint bloat
+### Genuinely new approaches to consider:
+- Investigate the train/eval image pipeline mismatch (P1 blocker)
+- Analyze worst predictions to find systematic failure modes
+- Try a completely different prompt that gives more context to the model
+- Consider if the base model (Qwen3-VL-2B) is too small for this task
 
 ## Experiment log
 

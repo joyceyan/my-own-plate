@@ -16,3 +16,8 @@ experiment	cal_mae_pct	protein_mae_pct	fat_mae_pct	carbs_mae_pct	avg_mae_pct	par
 14	59.1	58.6	72.2	62.0	63.0	0	kept	P2 attn+MLP 10ep: best avg! protein-10pp carbs-9.4pp (fat+8.7pp)
 15	-	-	-	-	-	disk full	reverted	100ep cosine decay: disk full at 50ep (277 checkpoints * 70MB), abandoned
 16	55.8	59.4	68.4	56.4	60.0	0	kept	P3 rank32 attn+MLP 10ep: best avg! all nutrients improved, fat recovering
+17	-	-	-	-	-	crash	reverted	rank32 dropout=0.05: weights corrupted
+18	59.6	67.5	70.5	57.3	63.7	10	reverted	integer nutrients: worse +3.7pp avg
+19	-	-	-	-	-	20/20	reverted	alpha=2.0: 100% parse failure
+20	64.7	51.1	78.5	71.2	66.4	0	reverted	alpha=0.5: protein best (51.1%) but avg worse +6.4pp
+21	56.6	53.5	91.5	58.6	65.1	1	reverted	lr=5e-6 20ep: fat catastrophic 91.5%, protein-fat tradeoff
