@@ -133,21 +133,31 @@ def main():
         logger.warning(f"No '{args.val_split}' split found — training without validation")
 
     # ------------------------------------------------------------------
-    # Setup LoRA — attention + MLP projections
+    # Setup LoRA — LLM attn+MLP + VL merger (vision-language projector)
     # ------------------------------------------------------------------
-    from mlx_vlm.trainer.utils import get_peft_model
-    lora_modules = [
-        "q_proj", "k_proj", "v_proj", "o_proj",  # attention
-        "gate_proj", "up_proj", "down_proj",       # MLP (for numerical regression)
-    ]
-    model = get_peft_model(
-        model,
-        lora_modules,
-        rank=args.lora_rank,
-        alpha=args.lora_alpha,
-        dropout=0.0,
-        verbose=False,
+    from mlx_vlm.trainer.utils import (
+        get_peft_model, LoRaLayer, set_module_by_name, freeze_model
     )
+    import mlx.nn as nn
+
+    # 1) LLM layers
+    llm_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
+                    "gate_proj", "up_proj", "down_proj"]
+    model = get_peft_model(
+        model, llm_modules,
+        rank=args.lora_rank, alpha=args.lora_alpha, dropout=0.0, verbose=False,
+    )
+
+    # 2) VL merger + deepstack mergers (vision→language bridge, NOT vision blocks)
+    merger_lora_count = 0
+    for merger_module in [model.vision_tower.merger,
+                          *model.vision_tower.deepstack_merger_list]:
+        for name, module in merger_module.named_modules():
+            if isinstance(module, (nn.Linear, nn.QuantizedLinear)):
+                lora_layer = LoRaLayer(module, args.lora_rank, args.lora_alpha, 0.0)
+                set_module_by_name(merger_module, name, lora_layer)
+                merger_lora_count += 1
+    print(f"Applied LoRA to {merger_lora_count} VL merger layers")
     print_trainable_parameters(model)
 
     # ------------------------------------------------------------------

@@ -21,3 +21,4 @@ experiment	cal_mae_pct	protein_mae_pct	fat_mae_pct	carbs_mae_pct	avg_mae_pct	par
 19	-	-	-	-	-	20/20	reverted	alpha=2.0: 100% parse failure
 20	64.7	51.1	78.5	71.2	66.4	0	reverted	alpha=0.5: protein best (51.1%) but avg worse +6.4pp
 21	56.6	53.5	91.5	58.6	65.1	1	reverted	lr=5e-6 20ep: fat catastrophic 91.5%, protein-fat tradeoff
+22	80.3	87.8	83.0	78.6	82.4	112	reverted	full vision+LLM LoRA r32: 32% prompt echoing, too aggressive

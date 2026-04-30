@@ -112,12 +112,19 @@ def load_mlx_model(model_path: str, adapter_path: str = None, lora_rank: int = 1
         ap = Path(adapter_path).expanduser()
         if ap.exists():
             adapter_path = str(ap.resolve())
-        from mlx_vlm.trainer.utils import get_peft_model
-        lora_modules = [
-            "q_proj", "k_proj", "v_proj", "o_proj",
-            "gate_proj", "up_proj", "down_proj",
-        ]
-        model = get_peft_model(model, lora_modules, rank=lora_rank, alpha=lora_alpha, dropout=0.0, verbose=False)
+        from mlx_vlm.trainer.utils import get_peft_model, LoRaLayer, set_module_by_name
+        import mlx.nn as nn
+        # LLM LoRA
+        llm_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
+                        "gate_proj", "up_proj", "down_proj"]
+        model = get_peft_model(model, llm_modules, rank=lora_rank, alpha=lora_alpha, dropout=0.0, verbose=False)
+        # VL merger LoRA
+        for merger_module in [model.vision_tower.merger,
+                              *model.vision_tower.deepstack_merger_list]:
+            for name, module in merger_module.named_modules():
+                if isinstance(module, (nn.Linear, nn.QuantizedLinear)):
+                    lora_layer = LoRaLayer(module, lora_rank, lora_alpha, 0.0)
+                    set_module_by_name(merger_module, name, lora_layer)
         adapter_file = Path(adapter_path) / "adapters.safetensors"
         model.load_weights(str(adapter_file), strict=False)
 
