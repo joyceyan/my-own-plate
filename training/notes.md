@@ -29,9 +29,9 @@ Key observations:
 
 ## Ideas queue
 
-**Current best: exp 16 — rank 32, alpha 1.0, attn+MLP, Adam lr=1e-5, 10 epochs = 60.0% avg.**
+**Current best: exp 23 — rank 32, alpha 1.0, LLM attn+MLP + VL merger, Adam lr=1e-5, 10 epochs = 59.6% avg.**
 
-5 consecutive experiments (17-21) failed to improve on exp 16. P2/P3/P4 are exhausted. The remaining gap to 30.4% (N5k baseline) likely requires a fundamentally different approach.
+VL merger LoRA broke the exp 16 plateau. Full vision tower LoRA (exp 22) was too aggressive (prompt echoing), but targeted merger-only adaptation works.
 
 ### Key findings (settled — do not re-explore):
 - **Modules**: attn+MLP (7 modules) >> attn-only (4 modules). MLP needed for numerical regression.
@@ -43,16 +43,11 @@ Key observations:
 - **Optimizer**: Adam only. AdamW/Muon both failed.
 - **Data**: Float nutrients > integer. Nutrients-only > ingredients+nutrients.
 
-### What might still help (P1 — image pipeline):
-- Investigate VisionDataset image processing vs mlx_vlm.generate() — there's a train/eval mismatch
-- Understand what resolution the vision encoder actually receives
-- Try passing images differently to ensure train and eval use the same preprocessing
-
-### Genuinely new approaches to consider:
-- Investigate the train/eval image pipeline mismatch (P1 blocker)
-- Analyze worst predictions to find systematic failure modes
-- Try a completely different prompt that gives more context to the model
-- Consider if the base model (Qwen3-VL-2B) is too small for this task
+### Next experiments:
+- **Vision tower top 4 blocks only** — exp 22 (all 24 blocks) failed, but top 4 blocks might work. Fewer LoRA layers = less risk of prompt echoing.
+- **Chain-of-thought completion** — add food description before numbers: `{"food": "grilled chicken with rice", "calories": 350, ...}`. Reasoning step may improve prediction.
+- **Analyze worst predictions** — find systematic failure modes to target
+- **Investigate train/eval image pipeline mismatch** — P1 blocker
 
 ## Experiment log
 
