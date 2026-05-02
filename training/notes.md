@@ -262,7 +262,9 @@ Disk full at ~50 epochs. 277 checkpoints * 70MB = 18GB consumed all free space. 
 
 **Training notes**: Train loss ~0.13 (vs Phase 1's 0.242 plateau). Training took 353 min (~5.9 hrs) — much longer than Phase 1 because images are actually processed through the vision tower. Peak mem 6.274 GB. ~1.28 it/sec.
 
-**Insight**: The vision fix is transformative — 31.5pp average improvement. The model was always capable; it just never saw the images. Fat is the only nutrient still above the N5k baseline (36.6% vs 34.2%). The protein-fat trade-off from Phase 1 is largely resolved — both are now competitive. Next: try zero-calorie filter, then explore if hyperparameters need re-tuning for vision.
+**Insight**: The vision fix is transformative — 31.5pp average improvement. The model was always capable; it just never saw the images. Fat is the only nutrient still above the N5k baseline (36.6% vs 34.2%). The protein-fat trade-off from Phase 1 is largely resolved — both are now competitive.
+
+**Note**: The zero-calorie filter from exp 28 was never reverted from the data pipeline — exp 29 already trained on filtered data (0 zero-cal samples). Exp 30 (zero-cal filter) is therefore redundant. Skipping to hyperparameter exploration.
 
 ---
 
