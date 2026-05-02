@@ -30,3 +30,4 @@ experiment	cal_mae_pct	protein_mae_pct	fat_mae_pct	carbs_mae_pct	avg_mae_pct	par
 28	-	-	-	-	-	-	reverted	zero-cal filter + pipeline fix: DISCOVERED vision tower was bypassed for all exps 0-28
 29	23.1	26.6	36.6	25.9	28.1	1	kept	Phase 2 baseline: exp 23 config + FixedVisionDataset. Beats N5k on cal/protein/carbs
 30	23.0	25.8	36.0	24.9	27.4	1	kept	rank 64 (2x exp 29): all nutrients improved, new best avg
+31	23.6	26.8	34.6	26.6	27.9	5	reverted	r64 15ep: fat improved to near N5k but avg worse +0.5pp, overfitting

@@ -274,7 +274,15 @@ Disk full at ~50 epochs. 277 checkpoints * 70MB = 18GB consumed all free space. 
 
 **Training notes**: Train loss ~0.07 (lower than exp 29's 0.13). Val loss 0.425 (higher than exp 29's 0.353) — more capacity leads to better training fit but higher val loss, yet MAE% still improves. Training 362.7 min, peak mem 6.717 GB.
 
-**Insight**: Higher rank helps even in Phase 2. The extra capacity lets the model learn more nuanced visual-to-nutrient mappings. Val loss divergence from MAE% improvement suggests the model is learning to be more precise on nutrient values (which matter for MAE) while being less well-calibrated on token probabilities (which val loss measures). Next: try even higher rank (r128), or try longer training with r64.
+**Insight**: Higher rank helps even in Phase 2. The extra capacity lets the model learn more nuanced visual-to-nutrient mappings. Val loss divergence from MAE% improvement suggests the model is learning to be more precise on nutrient values (which matter for MAE) while being less well-calibrated on token probabilities (which val loss measures).
+
+### Exp 31: 15 epochs with r64 — REVERTED
+
+**Config**: Same as exp 30 but 15 epochs (50% more training).
+
+**Result**: 23.6/26.8/34.6/26.6 = **27.9% avg** — worse than exp 30 (27.4%). Fat improved to 34.6% (nearly matching N5k's 34.2%) but calories +0.6pp, protein +1.0pp, carbs +1.7pp. 5 parse failures (up from 1). Val loss reached 0.647 (vs 0.425 at 10ep).
+
+**Insight**: 15 epochs overfits with r64 — the higher capacity model memorizes training data faster, requiring fewer epochs. Fat improvement suggests the model *does* learn more with longer training, but at the cost of generalization on other nutrients. 10 epochs remains optimal. Next: try vision tower LoRA (top blocks) — now that vision works, adapting the visual encoder should help.
 
 ---
 

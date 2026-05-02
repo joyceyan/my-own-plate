@@ -219,6 +219,19 @@ def main():
                 set_module_by_name(merger_module, name, lora_layer)
                 merger_lora_count += 1
     print(f"Applied LoRA to {merger_lora_count} VL merger layers")
+
+    # 3) Vision tower top-N blocks (lower rank to avoid disrupting pretrained features)
+    vision_lora_rank = 16  # conservative rank for vision blocks
+    vision_blocks = model.vision_tower.blocks
+    num_vision_blocks = 2  # top 2 blocks only
+    vision_lora_count = 0
+    for block in vision_blocks[-num_vision_blocks:]:
+        for name, module in block.named_modules():
+            if isinstance(module, (nn.Linear, nn.QuantizedLinear)):
+                lora_layer = LoRaLayer(module, vision_lora_rank, args.lora_alpha, 0.0)
+                set_module_by_name(block, name, lora_layer)
+                vision_lora_count += 1
+    print(f"Applied LoRA (r{vision_lora_rank}) to top {num_vision_blocks} vision blocks ({vision_lora_count} layers)")
     print_trainable_parameters(model)
 
     # ------------------------------------------------------------------
