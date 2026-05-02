@@ -21,13 +21,74 @@ import mlx.optimizers as optim
 from datasets import load_dataset
 
 from mlx_vlm.lora import transform_dataset_to_messages
-from mlx_vlm.trainer.datasets import VisionDataset
+from mlx_vlm.trainer.datasets import VisionDataset, get_prompt
 from mlx_vlm.trainer.sft_trainer import TrainingArgs, train
 from mlx_vlm.trainer.utils import print_trainable_parameters
-from mlx_vlm.utils import load
+from mlx_vlm.utils import load, prepare_inputs
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Fixed VisionDataset — passes images through the vision pipeline
+# ---------------------------------------------------------------------------
+
+class FixedVisionDataset:
+    """
+    Drop-in replacement for mlx_vlm's VisionDataset that actually processes
+    images through the vision pipeline for Qwen models.
+
+    Bug: VisionDataset sets images=None for Qwen (use_embedded_images=True),
+    which causes prepare_inputs to take the text-only path. Result: pixel_values
+    is None, the vision tower is bypassed, and training is text-only.
+
+    Fix: always pass images to prepare_inputs so pixel_values are computed.
+    """
+
+    def __init__(self, hf_dataset, config, processor, image_resize_shape=None):
+        self.dataset = hf_dataset
+        self.processor = processor
+        self.config = config
+        self.image_resize_shape = tuple(image_resize_shape) if image_resize_shape else None
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+        return self.process(self.dataset[idx])
+
+    def process(self, item):
+        images = item.get("images", item.get("image", []))
+        if not isinstance(images, list):
+            images = [images] if images else []
+
+        conversations = item.get("messages", item.get("conversations"))
+        model_type = self.config.get("model_type")
+        prompt = get_prompt(model_type, self.processor, conversations)
+
+        image_token_index = self.config.get("image_token_index") or \
+                            self.config.get("image_token_id")
+
+        inputs = prepare_inputs(
+            processor=self.processor,
+            images=images if images else None,
+            prompts=[prompt],
+            image_token_index=image_token_index,
+            resize_shape=self.image_resize_shape,
+        )
+
+        # prepare_inputs returns tensors with a leading batch dim (1, N).
+        # iterate_batches expects per-sample tensors — squeeze batch dim
+        # from input_ids/attention_mask so len() returns the sequence length.
+        result = {}
+        for k, v in inputs.items():
+            if isinstance(v, mx.array) and v.ndim >= 2 and v.shape[0] == 1:
+                if k in ("input_ids", "attention_mask"):
+                    v = v.squeeze(0)
+            result[k] = v
+
+        return result
 
 
 def parse_args():
@@ -115,7 +176,7 @@ def main():
 
     train_ds = train_ds.select(range(min(iters, len(train_ds))))
     train_ds = transform_dataset_to_messages(train_ds, model_type)
-    train_dataset = VisionDataset(
+    train_dataset = FixedVisionDataset(
         train_ds, config, processor, image_resize_shape=args.image_resize,
     )
 
@@ -125,7 +186,7 @@ def main():
         logger.info(f"Loading validation data: {args.train_data} (split={args.val_split})")
         val_ds = load_dataset(args.train_data, split=args.val_split)
         val_ds = transform_dataset_to_messages(val_ds, model_type)
-        val_dataset = VisionDataset(
+        val_dataset = FixedVisionDataset(
             val_ds, config, processor, image_resize_shape=args.image_resize,
         )
         logger.info(f"Validation: {len(val_ds)} samples")

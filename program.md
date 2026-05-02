@@ -22,19 +22,25 @@ This setup is **idempotent** — it can be re-run safely.
    cd /Users/jyan/src/my-own-plate/training && python -c "import mlx_vlm; print('mlx-vlm OK')"
    ```
 
+## IMPORTANT: Phase 2 (vision-enabled training)
+
+**Experiments 0-28 (Phase 1) are invalidated.** A critical bug was discovered: mlx-vlm's `VisionDataset` passed `images=None` for Qwen models, causing the vision tower to be completely bypassed during training. All Phase 1 experiments were text-only — the model never saw food images.
+
+The fix (`FixedVisionDataset` in `train.py`) passes actual images through `prepare_inputs`, producing real `pixel_values` and correct image token counts. `evaluate.py` now passes `--image-resize` to match training resolution.
+
+**Phase 2 starts at exp 29.** Treat this as a fresh start. Phase 1 hyperparameter findings (rank, LR, epochs, etc.) are suspect and need re-validation with actual vision.
+
 ## Baseline
 
-Current fine-tuned model (LoRA rank 16, alpha 1.0, lr 1e-5, 3 epochs, attention-only):
+Phase 2 baseline TBD (exp 29). For reference, the N5k RGB baselines (Thames et al. CVPR 2021):
 
-| Nutrient  | MAE%  | N5k Baseline |
-|-----------|-------|--------------|
-| Calories  | 59.6% | 26.1%        |
-| Protein   | 54.5% | 29.5%        |
-| Fat       | 74.3% | 34.2%        |
-| Carbs     | 90.0% | 31.9%        |
-| **Avg**   | **69.6%** | **30.4%** |
-
-Parse failures: 6 / 349 samples.
+| Nutrient  | N5k Baseline |
+|-----------|--------------|
+| Calories  | 26.1%        |
+| Protein   | 29.5%        |
+| Fat       | 34.2%        |
+| Carbs     | 31.9%        |
+| **Avg**   | **30.4%**    |
 
 ## Success criteria
 
@@ -105,15 +111,14 @@ LOOP FOREVER:
 
 ## What to try
 
-The model is currently far from the N5k baselines (69.6% avg vs 30.4%), so there is significant room for improvement. Possible directions:
+Phase 2 starts fresh with vision-enabled training. The model should now learn from actual food images, which may change the optimization landscape entirely.
 
-- **Hyperparameters**: Learning rate schedules (warmup, cosine decay), different LR values, more epochs, LoRA rank/alpha tuning.
-- **LoRA targets**: Expand LoRA to MLP layers (carefully — previous attempt caused overfitting), or try different layer selections.
-- **Training strategy**: Curriculum learning, loss weighting, data augmentation via prompt variation.
-- **Prompt engineering**: Modify the prompt template in the dataset to give the model better structure.
-- **Image processing**: Different resize dimensions (current: 384x384), aspect ratio preservation.
-- **Regularization**: Dropout in LoRA layers, weight decay, early stopping based on val loss.
-- **Optimizer**: Try AdamW with weight decay, or different beta values.
+- **Exp 29 (first priority)**: Run the exp 23 config (LLM attn+MLP + VL merger, r32, a1.0, lr1e-5, 10ep) with `FixedVisionDataset` to establish a Phase 2 baseline. Compare to Phase 1 results to measure the vision fix impact.
+- **Hyperparameters**: All Phase 1 findings about rank, LR, epochs need re-validation. Vision features change gradient dynamics.
+- **Image resolution**: Now that images actually affect training, test different resize dimensions (384x384 vs native vs intermediate).
+- **LoRA targets**: Vision tower blocks may now help since the pipeline works. Re-test top-N vision block LoRA.
+- **Epoch count**: Overfitting characteristics will change with real vision features — longer training may now help.
+- **Learning rate**: The optimal LR may differ with vision gradients flowing through the merger.
 
 ## Important notes
 

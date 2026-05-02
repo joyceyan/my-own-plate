@@ -29,30 +29,36 @@ Key observations:
 
 ## Ideas queue
 
-**Current best: exp 23 — rank 32, alpha 1.0, LLM attn+MLP + VL merger, Adam lr=1e-5, 10 epochs = 59.6% avg.**
+### PHASE 1 INVALIDATED — experiments 0-28 trained text-only (see exp 28 postmortem below)
 
-### Key findings (settled):
-- **LLM modules**: attn+MLP (7 modules), rank 32, alpha 1.0, dropout 0.0
-- **Vision modules**: VL merger only (8 layers). Vision tower blocks hurt (exp 22/24/26).
-- **Epochs**: 10 with attn+MLP+merger. 20+ overfits.
-- **LR**: 1e-5 constant. Higher=corruption, lower=fat collapse.
-- **Optimizer**: Adam only. AdamW/Muon failed.
-- **Data format**: Nutrients-only float JSON. No ingredients, no chain-of-thought (exp 25 = worse).
-- **Augmentation**: hflip doesn't propagate correctly through Qwen's image tokenization (exp 27).
-- **Vision tower LoRA**: full tower (exp 22, r32) = 32% prompt echoing. Top 4 blocks (exp 24, r32) = protein/carbs regressed. Top 2 blocks (exp 26, r8) = better but still worse than merger-only. Merger-only is the sweet spot.
+All Phase 1 hyperparameter findings are suspect because the vision tower was never used during training. The model was memorizing text patterns, not learning from food images. Phase 2 restarts from scratch with the fixed pipeline.
 
-### Error analysis (exp 23):
-- 117/349 val samples (33%) have <100 kcal, MAE=179 kcal — worst bracket
-- Zero-calorie dishes (6.6% of data) confuse the model: food images labeled 0 cal
-- Model predicts ~280 kcal for everything (compressed around the mean)
-- Model can't distinguish small/large portions or predict extreme values
-- Worst failures: true=769→pred=180, true=0→pred=520
+---
+
+## Phase 2: Vision-enabled training (exp 29+)
+
+**Current best: none yet — Phase 2 baseline TBD.**
+
+### What changed:
+- **FixedVisionDataset** replaces mlx-vlm's VisionDataset in train.py. The upstream VisionDataset passes `images=None` for Qwen models (`use_embedded_images=True`), causing `prepare_inputs` to take the text-only path. Result: `pixel_values=None`, vision tower completely bypassed. The fix passes actual images so the vision tower processes them.
+- **evaluate.py** now passes `--image-resize` (default 384x384) to `generate()` so eval uses the same resolution as training.
+- **Diagnostic script** (`diagnose_pipeline.py`) confirms the fix: pixel_values=(432,1536), 108 image tokens, matching eval pipeline at 384x384.
+
+### What carries forward from Phase 1:
+- Data format: nutrients-only float JSON (no ingredients)
+- Data pipeline: 80/10/10 split by dish ID
+- LoRA architecture: LLM attn+MLP + VL merger (likely still a good starting point)
+- Evaluation: alias-aware parser, MAE% metrics
+
+### What needs re-exploration in Phase 2:
+- All hyperparameters (rank, alpha, LR, epochs) — optimal values may be completely different with actual vision
+- LoRA module selection — vision tower blocks may now help since the pipeline works
+- Image resolution — now that it actually affects training
+- Epoch count — overfitting characteristics will change with real vision features
 
 ### Next experiments:
-- **Filter zero-calorie samples** — exp 28 in progress, removes 230 contradictory training samples
-- **Investigate train/eval image pipeline mismatch** — VisionDataset vs generate() use different preprocessing
-- **Lower LR for merger** via MultiOptimizer — merger might need gentler adaptation than LLM
-- **Explore what the model actually "sees"** — check if specific food types systematically fail
+- **Exp 29**: Phase 2 baseline — same config as exp 23 (LLM attn+MLP + VL merger, r32, 10ep) but with FixedVisionDataset. Compare to Phase 1 to measure the impact of the vision fix.
+- Then sweep hyperparameters from this new baseline.
 
 ## Experiment log
 
@@ -215,6 +221,29 @@ Disk full at ~50 epochs. 277 checkpoints * 70MB = 18GB consumed all free space. 
 ### Exp 27: Hflip augmentation — REVERTED
 
 **Result**: 65.7/63.9/81.6/67.5 = 69.7% avg. Augmentation massively hurt (+10pp). PIL hflip may not propagate correctly through Qwen's image tokenization pipeline.
+
+### Exp 28: Filter zero-calorie samples + pipeline investigation — REVERTED (pipeline broken)
+
+**Hypothesis**: Zero-calorie dishes (6.6% of data) confuse the model. Removing them should improve accuracy.
+
+**Result**: Experiment terminated early. During investigation of the train/eval image pipeline mismatch, discovered a critical bug: **the vision tower was never used during training for any experiment (0-28).**
+
+**Root cause**: mlx-vlm's `VisionDataset` sets `images=None` for Qwen models (line 109 of `mlx_vlm/trainer/datasets.py`, `use_embedded_images=True`). This causes `prepare_inputs()` to take the text-only early return path. Result:
+- `pixel_values=None` during training — vision tower completely bypassed
+- 1 `<|image_pad|>` token in training (vs 108 at 384x384 / 300 at native res in eval)
+- The model trained on text-only embeddings for image placeholder tokens
+- All experiments 0-28 were effectively text-only fine-tuning
+
+**Evidence**:
+- Exp 12 (640x480 vs 384x384): identical training speed/memory — because images weren't processed
+- The model plateaued at ~60% MAE% — memorizing mean values, not learning from images
+- The protein-fat trade-off — without vision, the model can't distinguish food types
+
+**Fix**: Created `FixedVisionDataset` in `train.py` that always passes images to `prepare_inputs`. Also fixed `evaluate.py` to pass `resize_shape` matching training. Verified end-to-end: pixel_values present, image tokens match between train/eval, forward pass + loss + gradient computation all work.
+
+**Impact**: All Phase 1 results (exps 0-28) are invalid as vision benchmarks. Phase 2 restarts from scratch.
+
+---
 
 ### Data change: Cap ingredients at 5 (pre-exp 3)
 

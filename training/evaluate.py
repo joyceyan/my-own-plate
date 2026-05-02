@@ -133,7 +133,7 @@ def load_mlx_model(model_path: str, adapter_path: str = None, lora_rank: int = 1
 
 
 def infer_mlx(model, processor, config, prompt: str, image_path: str = None,
-              max_tokens: int = 512) -> str:
+              max_tokens: int = 512, image_resize: list = None) -> str:
     from mlx_vlm import generate
     from mlx_vlm.prompt_utils import apply_chat_template
 
@@ -141,11 +141,15 @@ def infer_mlx(model, processor, config, prompt: str, image_path: str = None,
     formatted = apply_chat_template(
         processor, config, prompt, num_images=num_images
     )
+    kwargs = {}
+    if image_resize is not None:
+        kwargs["resize_shape"] = image_resize
     result = generate(
         model, processor, formatted,
         image=image_path if num_images else None,
         max_tokens=max_tokens,
         temperature=0.0,
+        **kwargs,
     )
     return result.text if hasattr(result, "text") else str(result)
 
@@ -351,13 +355,15 @@ class EvalAbortError(Exception):
 
 
 def run_eval(samples, model_type, model_path, adapter_path=None,
-             max_parse_failures=20, lora_rank=16, lora_alpha=1.0):
+             max_parse_failures=20, lora_rank=16, lora_alpha=1.0,
+             image_resize=None):
     """Run inference on all samples. Returns (predictions, parse_failures, failed_log).
     Raises EvalAbortError if parse failures exceed max_parse_failures."""
     if model_type == "mlx":
         model, processor, config = load_mlx_model(model_path, adapter_path=adapter_path,
                                                    lora_rank=lora_rank, lora_alpha=lora_alpha)
-        infer_fn = lambda prompt, img: infer_mlx(model, processor, config, prompt, image_path=img)
+        infer_fn = lambda prompt, img: infer_mlx(model, processor, config, prompt,
+                                                  image_path=img, image_resize=image_resize)
     else:
         model = load_gguf_model(model_path)
         infer_fn = lambda prompt, img: infer_gguf(model, prompt)
@@ -507,6 +513,8 @@ def parse_args():
                         help="LoRA rank (must match training, default: 16)")
     parser.add_argument("--lora-alpha", type=float, default=1.0,
                         help="LoRA alpha (must match training, default: 1.0)")
+    parser.add_argument("--image-resize", type=int, nargs=2, default=[384, 384],
+                        help="Resize images to this shape (must match training, default: 384 384)")
     return parser.parse_args()
 
 
@@ -551,6 +559,7 @@ def main():
             samples, args.model_type, args.model,
             adapter_path=args.adapter_path, max_parse_failures=max_fail,
             lora_rank=args.lora_rank, lora_alpha=args.lora_alpha,
+            image_resize=args.image_resize,
         )
     except EvalAbortError as e:
         print(f"\n  ABORTED: {e}")
@@ -576,6 +585,7 @@ def main():
         try:
             base_preds, base_failures, base_failed_log = run_eval(
                 samples, "mlx", args.model, max_parse_failures=max_fail,
+                image_resize=args.image_resize,
             )
         except EvalAbortError as e:
             print(f"\n  ABORTED: {e}")
