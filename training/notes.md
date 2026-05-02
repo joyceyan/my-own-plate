@@ -31,23 +31,28 @@ Key observations:
 
 **Current best: exp 23 — rank 32, alpha 1.0, LLM attn+MLP + VL merger, Adam lr=1e-5, 10 epochs = 59.6% avg.**
 
-VL merger LoRA broke the exp 16 plateau. Full vision tower LoRA (exp 22) was too aggressive (prompt echoing), but targeted merger-only adaptation works.
+### Key findings (settled):
+- **LLM modules**: attn+MLP (7 modules), rank 32, alpha 1.0, dropout 0.0
+- **Vision modules**: VL merger only (8 layers). Vision tower blocks hurt (exp 22/24/26).
+- **Epochs**: 10 with attn+MLP+merger. 20+ overfits.
+- **LR**: 1e-5 constant. Higher=corruption, lower=fat collapse.
+- **Optimizer**: Adam only. AdamW/Muon failed.
+- **Data format**: Nutrients-only float JSON. No ingredients, no chain-of-thought (exp 25 = worse).
+- **Augmentation**: hflip doesn't propagate correctly through Qwen's image tokenization (exp 27).
+- **Vision tower LoRA**: full tower (exp 22, r32) = 32% prompt echoing. Top 4 blocks (exp 24, r32) = protein/carbs regressed. Top 2 blocks (exp 26, r8) = better but still worse than merger-only. Merger-only is the sweet spot.
 
-### Key findings (settled — do not re-explore):
-- **Modules**: attn+MLP (7 modules) >> attn-only (4 modules). MLP needed for numerical regression.
-- **Rank**: 32 > 16. More capacity per module helps.
-- **Alpha**: 1.0 is the only working value. 2.0 = corruption, 0.5 = under-adapts.
-- **Dropout**: 0.0 only. 0.05 = corruption.
-- **Epochs**: 10 for attn+MLP. 20+ overfits with MLP layers.
-- **LR**: 1e-5 only. Higher = format corruption, lower (5e-6) = fat collapse.
-- **Optimizer**: Adam only. AdamW/Muon both failed.
-- **Data**: Float nutrients > integer. Nutrients-only > ingredients+nutrients.
+### Error analysis (exp 23):
+- 117/349 val samples (33%) have <100 kcal, MAE=179 kcal — worst bracket
+- Zero-calorie dishes (6.6% of data) confuse the model: food images labeled 0 cal
+- Model predicts ~280 kcal for everything (compressed around the mean)
+- Model can't distinguish small/large portions or predict extreme values
+- Worst failures: true=769→pred=180, true=0→pred=520
 
 ### Next experiments:
-- **Vision tower top 4 blocks only** — exp 22 (all 24 blocks) failed, but top 4 blocks might work. Fewer LoRA layers = less risk of prompt echoing.
-- **Chain-of-thought completion** — add food description before numbers: `{"food": "grilled chicken with rice", "calories": 350, ...}`. Reasoning step may improve prediction.
-- **Analyze worst predictions** — find systematic failure modes to target
-- **Investigate train/eval image pipeline mismatch** — P1 blocker
+- **Filter zero-calorie samples** — exp 28 in progress, removes 230 contradictory training samples
+- **Investigate train/eval image pipeline mismatch** — VisionDataset vs generate() use different preprocessing
+- **Lower LR for merger** via MultiOptimizer — merger might need gentler adaptation than LLM
+- **Explore what the model actually "sees"** — check if specific food types systematically fail
 
 ## Experiment log
 
@@ -172,6 +177,44 @@ Disk full at ~50 epochs. 277 checkpoints * 70MB = 18GB consumed all free space. 
 **Result**: 55.8/59.4/68.4/56.4 = **60.0% avg** — new best! All nutrients improved vs exp 14: calories -3.3pp, fat -3.8pp, carbs -5.6pp. Protein +0.8pp (within threshold). Zero parse failures.
 
 **Insight**: Rank 32 gives a clean 3pp average improvement. The extra capacity per module helps all nutrients, and partially recovers the fat regression from exp 14. Carbs is now the best nutrient at 56.4% (was 90% at exp 0!). Next: try rank 32 with dropout 0.05 for regularization, or try alpha tuning.
+
+### Exps 17-21: P3 hyperparameter sweep — ALL REVERTED
+
+- **Exp 17**: dropout=0.05 → UnicodeDecodeError, weights corrupted
+- **Exp 18**: integer nutrient rounding → worse +3.7pp avg, 10 parse failures
+- **Exp 19**: alpha=2.0 → 100% parse failure, adapter too strong
+- **Exp 20**: alpha=0.5 → protein best ever (51.1%) but avg +6.4pp worse
+- **Exp 21**: lr=5e-6 20ep → fat catastrophic 91.5%
+
+**Conclusion**: rank 32, alpha 1.0, dropout 0.0, lr=1e-5, 10ep is the sweet spot. No P3 variation improves on it.
+
+### Exp 22: Full vision tower + LLM LoRA r32, 10 epochs — REVERTED
+
+**Result**: 80.3/87.8/83.0/78.6 = 82.4% avg. 112 parse failures (32% prompt echoing). Applied LoRA to all 104 vision tower layers — way too aggressive.
+
+### Exp 23: LLM attn+MLP + VL merger LoRA r32, 10 epochs — KEPT
+
+**Config**: LLM LoRA (7 modules, r32) + VL merger+deepstack LoRA (8 layers, r32). 36.7M params. Manually applied LoRA to vision_tower.merger and deepstack_merger_list (get_peft_model only targets language_model).
+
+**Result**: 54.5/63.3/66.5/54.2 = **59.6% avg** — new best! Cal -1.3pp, fat -1.9pp, carbs -2.2pp vs exp 16. Protein +3.9pp (within threshold).
+
+**Insight**: The VL merger (vision→language bridge) is the key vision-side lever. Adapting it teaches the model to project food-relevant visual features into language space.
+
+### Exp 24: LLM + merger + vision top 4 blocks r32, 10 epochs — REVERTED
+
+**Result**: 54.7/71.5/68.1/61.3 = 63.9% avg. Adding vision blocks hurt protein (+8.2pp) and carbs (+7.1pp).
+
+### Exp 25: Chain-of-thought (food description in completion) — REVERTED
+
+**Result**: 64.7/56.8/81.7/108.2 = 77.9% avg. Carbs exploded to 108%. Adding ingredients back to completion reintroduced the problem from exp 6.
+
+### Exp 26: Mixed rank LLM r32 + vision merger+top2 r8 — REVERTED
+
+**Result**: 61.6/57.3/70.2/58.2 = 61.8% avg. Lower vision rank prevented corruption but vision blocks still hurt net performance.
+
+### Exp 27: Hflip augmentation — REVERTED
+
+**Result**: 65.7/63.9/81.6/67.5 = 69.7% avg. Augmentation massively hurt (+10pp). PIL hflip may not propagate correctly through Qwen's image tokenization pipeline.
 
 ### Data change: Cap ingredients at 5 (pre-exp 3)
 
