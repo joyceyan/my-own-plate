@@ -37,7 +37,7 @@ All Phase 1 hyperparameter findings are suspect because the vision tower was nev
 
 ## Phase 2: Vision-enabled training (exp 29+)
 
-**Current best: none yet — Phase 2 baseline TBD.**
+**Current best: exp 29 — 28.1% avg MAE% (beats N5k baselines on cal/protein/carbs)**
 
 ### What changed:
 - **FixedVisionDataset** replaces mlx-vlm's VisionDataset in train.py. The upstream VisionDataset passes `images=None` for Qwen models (`use_embedded_images=True`), causing `prepare_inputs` to take the text-only path. Result: `pixel_values=None`, vision tower completely bypassed. The fix passes actual images so the vision tower processes them.
@@ -57,8 +57,11 @@ All Phase 1 hyperparameter findings are suspect because the vision tower was nev
 - Epoch count — overfitting characteristics will change with real vision features
 
 ### Next experiments:
-- **Exp 29**: Phase 2 baseline — same config as exp 23 (LLM attn+MLP + VL merger, r32, 10ep) but with FixedVisionDataset. Compare to Phase 1 to measure the impact of the vision fix.
-- Then sweep hyperparameters from this new baseline.
+- **Exp 30**: Exp 29 + zero-calorie sample filter — measure data quality impact with vision.
+- Higher rank (48, 64) — more visual features may need more capacity.
+- Longer training (15, 20 epochs) — real learning signal may benefit from more epochs.
+- Vision tower LoRA — now that vision works, adapting top vision blocks may help.
+- Learning rate sweep — optimal LR may differ with vision gradients.
 
 ## Experiment log
 
@@ -242,6 +245,24 @@ Disk full at ~50 epochs. 277 checkpoints * 70MB = 18GB consumed all free space. 
 **Fix**: Created `FixedVisionDataset` in `train.py` that always passes images to `prepare_inputs`. Also fixed `evaluate.py` to pass `resize_shape` matching training. Verified end-to-end: pixel_values present, image tokens match between train/eval, forward pass + loss + gradient computation all work.
 
 **Impact**: All Phase 1 results (exps 0-28) are invalid as vision benchmarks. Phase 2 restarts from scratch.
+
+### Exp 29: Phase 2 baseline — exp 23 config + fixed vision pipeline — KEPT (PHASE 2 BASELINE)
+
+**Config**: Same as exp 23 (LLM attn+MLP + VL merger, r32, a1.0, lr1e-5, 10ep) with FixedVisionDataset. First experiment where the model truly sees food images during training.
+
+**Result**: 23.1/26.6/36.6/25.9 = **28.1% avg** — massive improvement over Phase 1 best (59.6%). Beats N5k RGB baselines on 3 of 4 nutrients. Only 1 parse failure.
+
+| Nutrient  | Exp 29 | Phase 1 best (exp 23) | N5k Baseline |
+|-----------|--------|----------------------|--------------|
+| Calories  | 23.1%  | 54.5%                | 26.1%        |
+| Protein   | 26.6%  | 63.3%                | 29.5%        |
+| Fat       | 36.6%  | 66.5%                | 34.2%        |
+| Carbs     | 25.9%  | 54.2%                | 31.9%        |
+| **Avg**   | **28.1%** | **59.6%**         | **30.4%**    |
+
+**Training notes**: Train loss ~0.13 (vs Phase 1's 0.242 plateau). Training took 353 min (~5.9 hrs) — much longer than Phase 1 because images are actually processed through the vision tower. Peak mem 6.274 GB. ~1.28 it/sec.
+
+**Insight**: The vision fix is transformative — 31.5pp average improvement. The model was always capable; it just never saw the images. Fat is the only nutrient still above the N5k baseline (36.6% vs 34.2%). The protein-fat trade-off from Phase 1 is largely resolved — both are now competitive. Next: try zero-calorie filter, then explore if hyperparameters need re-tuning for vision.
 
 ---
 
