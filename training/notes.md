@@ -37,7 +37,7 @@ All Phase 1 hyperparameter findings are suspect because the vision tower was nev
 
 ## Phase 2: Vision-enabled training (exp 29+)
 
-**Current best: exp 29 — 28.1% avg MAE% (beats N5k baselines on cal/protein/carbs)**
+**Current best: exp 30 — 27.4% avg MAE% (beats N5k baselines on cal/protein/carbs)**
 
 ### What changed:
 - **FixedVisionDataset** replaces mlx-vlm's VisionDataset in train.py. The upstream VisionDataset passes `images=None` for Qwen models (`use_embedded_images=True`), causing `prepare_inputs` to take the text-only path. Result: `pixel_values=None`, vision tower completely bypassed. The fix passes actual images so the vision tower processes them.
@@ -264,7 +264,17 @@ Disk full at ~50 epochs. 277 checkpoints * 70MB = 18GB consumed all free space. 
 
 **Insight**: The vision fix is transformative — 31.5pp average improvement. The model was always capable; it just never saw the images. Fat is the only nutrient still above the N5k baseline (36.6% vs 34.2%). The protein-fat trade-off from Phase 1 is largely resolved — both are now competitive.
 
-**Note**: The zero-calorie filter from exp 28 was never reverted from the data pipeline — exp 29 already trained on filtered data (0 zero-cal samples). Exp 30 (zero-cal filter) is therefore redundant. Skipping to hyperparameter exploration.
+**Note**: The zero-calorie filter from exp 28 was never reverted from the data pipeline — exp 29 already trained on filtered data (0 zero-cal samples). Original exp 30 (zero-cal filter) is therefore redundant. Exp number reused for rank 64 test.
+
+### Exp 30: Higher rank r64 (2x exp 29) — KEPT
+
+**Config**: Same as exp 29 but LoRA rank 64 (2x). 73.4M trainable params (vs 36.7M at r32).
+
+**Result**: 23.0/25.8/36.0/24.9 = **27.4% avg** — new best! All nutrients improved vs exp 29 (-0.1/-0.8/-0.6/-1.0pp). 1 parse failure.
+
+**Training notes**: Train loss ~0.07 (lower than exp 29's 0.13). Val loss 0.425 (higher than exp 29's 0.353) — more capacity leads to better training fit but higher val loss, yet MAE% still improves. Training 362.7 min, peak mem 6.717 GB.
+
+**Insight**: Higher rank helps even in Phase 2. The extra capacity lets the model learn more nuanced visual-to-nutrient mappings. Val loss divergence from MAE% improvement suggests the model is learning to be more precise on nutrient values (which matter for MAE) while being less well-calibrated on token probabilities (which val loss measures). Next: try even higher rank (r128), or try longer training with r64.
 
 ---
 
