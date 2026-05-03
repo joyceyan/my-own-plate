@@ -37,7 +37,7 @@ All Phase 1 hyperparameter findings are suspect because the vision tower was nev
 
 ## Phase 2: Vision-enabled training (exp 29+)
 
-**Current best: exp 33 — 24.0% avg MAE% (beats N5k baselines on ALL 4 nutrients)**
+**Current best: exp 34 — 23.0% avg MAE% (beats N5k baselines on ALL 4 nutrients)**
 
 ### What changed:
 - **FixedVisionDataset** replaces mlx-vlm's VisionDataset in train.py. The upstream VisionDataset passes `images=None` for Qwen models (`use_embedded_images=True`), causing `prepare_inputs` to take the text-only path. Result: `pixel_values=None`, vision tower completely bypassed. The fix passes actual images so the vision tower processes them.
@@ -308,7 +308,17 @@ Disk full at ~50 epochs. 277 checkpoints * 70MB = 18GB consumed all free space. 
 
 **Result**: 20.1/20.5/32.0/23.3 = **24.0% avg** — new best! All nutrients improved vs exp 32 (-0.6/-3.6/-0.8/-0.6pp). Protein dramatically improved to 20.5% (was 24.1%). 1 parse failure. Val loss 0.402 (slightly better than exp 32's 0.430).
 
-**Insight**: More vision blocks continues to help. Top-4 is better than top-2. The trend suggests the model benefits from adapting deeper visual features, not just the final representation layers. Next: try top-6 blocks to see if the trend continues, or try higher vision rank (r32) with top-4.
+**Insight**: More vision blocks continues to help. Top-4 is better than top-2. The trend suggests the model benefits from adapting deeper visual features, not just the final representation layers.
+
+### Exp 34: Vision tower top-6 blocks r16 + LLM r64 + merger r64 — KEPT
+
+**Config**: Same as exp 33 but top 6 vision blocks (blocks 18-23). 24 vision LoRA layers.
+
+**Result**: 19.1/21.2/29.7/21.9 = **23.0% avg** — new best! Cal -1.0pp, fat -2.3pp, carbs -1.4pp improved. Protein +0.7pp (within threshold). Fat now 29.7% — 4.5pp below N5k. Zero parse failures.
+
+**Vision block scaling trend**: top-0=27.4%, top-2=25.4%, top-4=24.0%, top-6=23.0%. Diminishing returns (~1pp/step) but still significant.
+
+**Insight**: The trend continues. More vision blocks = better. The model benefits from adapting increasingly deep visual features. Next: try top-8 to see if gains continue.
 
 ---
 
