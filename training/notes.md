@@ -37,7 +37,7 @@ All Phase 1 hyperparameter findings are suspect because the vision tower was nev
 
 ## Phase 2: Vision-enabled training (exp 29+)
 
-**Current best: exp 32 — 25.4% avg MAE% (beats N5k baselines on ALL 4 nutrients)**
+**Current best: exp 33 — 24.0% avg MAE% (beats N5k baselines on ALL 4 nutrients)**
 
 ### What changed:
 - **FixedVisionDataset** replaces mlx-vlm's VisionDataset in train.py. The upstream VisionDataset passes `images=None` for Qwen models (`use_embedded_images=True`), causing `prepare_inputs` to take the text-only path. Result: `pixel_values=None`, vision tower completely bypassed. The fix passes actual images so the vision tower processes them.
@@ -300,7 +300,15 @@ Disk full at ~50 epochs. 277 checkpoints * 70MB = 18GB consumed all free space. 
 
 **Training notes**: 369 min, peak mem 6.724 GB, val loss 0.430. Train loss ~0.10.
 
-**Insight**: Vision tower LoRA now helps dramatically — confirming the user's hypothesis that with real vision signal, adapting the encoder gives the model a real job to do. The conservative r16 for vision blocks (vs r64 for LLM) works well — enough adaptation without disrupting pretrained visual features. Fat improved most (-3.2pp), finally crossing the N5k baseline. Next: try more vision blocks (top 4) or higher vision rank (r32).
+**Insight**: Vision tower LoRA now helps dramatically — confirming the user's hypothesis that with real vision signal, adapting the encoder gives the model a real job to do. The conservative r16 for vision blocks (vs r64 for LLM) works well — enough adaptation without disrupting pretrained visual features. Fat improved most (-3.2pp), finally crossing the N5k baseline.
+
+### Exp 33: Vision tower top-4 blocks r16 + LLM r64 + merger r64 — KEPT
+
+**Config**: Same as exp 32 but top 4 vision blocks (blocks 20-23). 16 vision LoRA layers (vs 8 in exp 32).
+
+**Result**: 20.1/20.5/32.0/23.3 = **24.0% avg** — new best! All nutrients improved vs exp 32 (-0.6/-3.6/-0.8/-0.6pp). Protein dramatically improved to 20.5% (was 24.1%). 1 parse failure. Val loss 0.402 (slightly better than exp 32's 0.430).
+
+**Insight**: More vision blocks continues to help. Top-4 is better than top-2. The trend suggests the model benefits from adapting deeper visual features, not just the final representation layers. Next: try top-6 blocks to see if the trend continues, or try higher vision rank (r32) with top-4.
 
 ---
 
