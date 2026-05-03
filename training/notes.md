@@ -37,7 +37,7 @@ All Phase 1 hyperparameter findings are suspect because the vision tower was nev
 
 ## Phase 2: Vision-enabled training (exp 29+)
 
-**Current best: exp 30 — 27.4% avg MAE% (beats N5k baselines on cal/protein/carbs)**
+**Current best: exp 32 — 25.4% avg MAE% (beats N5k baselines on ALL 4 nutrients)**
 
 ### What changed:
 - **FixedVisionDataset** replaces mlx-vlm's VisionDataset in train.py. The upstream VisionDataset passes `images=None` for Qwen models (`use_embedded_images=True`), causing `prepare_inputs` to take the text-only path. Result: `pixel_values=None`, vision tower completely bypassed. The fix passes actual images so the vision tower processes them.
@@ -282,7 +282,25 @@ Disk full at ~50 epochs. 277 checkpoints * 70MB = 18GB consumed all free space. 
 
 **Result**: 23.6/26.8/34.6/26.6 = **27.9% avg** — worse than exp 30 (27.4%). Fat improved to 34.6% (nearly matching N5k's 34.2%) but calories +0.6pp, protein +1.0pp, carbs +1.7pp. 5 parse failures (up from 1). Val loss reached 0.647 (vs 0.425 at 10ep).
 
-**Insight**: 15 epochs overfits with r64 — the higher capacity model memorizes training data faster, requiring fewer epochs. Fat improvement suggests the model *does* learn more with longer training, but at the cost of generalization on other nutrients. 10 epochs remains optimal. Next: try vision tower LoRA (top blocks) — now that vision works, adapting the visual encoder should help.
+**Insight**: 15 epochs overfits with r64 — the higher capacity model memorizes training data faster, requiring fewer epochs. Fat improvement suggests the model *does* learn more with longer training, but at the cost of generalization on other nutrients. 10 epochs remains optimal.
+
+### Exp 32: Vision tower top-2 blocks LoRA r16 + LLM r64 + merger r64 — KEPT
+
+**Config**: Exp 30 + LoRA (r16) on top 2 vision blocks (blocks 22-23 of 24). 8 additional vision layers. All other params unchanged (LLM r64, merger r64, 10ep, lr1e-5).
+
+**Result**: 20.7/24.1/32.8/23.9 = **25.4% avg** — new best! All nutrients improved vs exp 30 (-2.3/-1.7/-3.2/-1.0pp). **All 4 nutrients now beat N5k RGB baselines.** Zero parse failures.
+
+| Nutrient  | Exp 32 | N5k Baseline | Delta  |
+|-----------|--------|--------------|--------|
+| Calories  | 20.7%  | 26.1%        | -5.4pp |
+| Protein   | 24.1%  | 29.5%        | -5.4pp |
+| Fat       | 32.8%  | 34.2%        | -1.4pp |
+| Carbs     | 23.9%  | 31.9%        | -8.0pp |
+| **Avg**   | **25.4%** | **30.4%** | **-5.0pp** |
+
+**Training notes**: 369 min, peak mem 6.724 GB, val loss 0.430. Train loss ~0.10.
+
+**Insight**: Vision tower LoRA now helps dramatically — confirming the user's hypothesis that with real vision signal, adapting the encoder gives the model a real job to do. The conservative r16 for vision blocks (vs r64 for LLM) works well — enough adaptation without disrupting pretrained visual features. Fat improved most (-3.2pp), finally crossing the N5k baseline. Next: try more vision blocks (top 4) or higher vision rank (r32).
 
 ---
 
