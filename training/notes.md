@@ -37,7 +37,7 @@ All Phase 1 hyperparameter findings are suspect because the vision tower was nev
 
 ## Phase 2: Vision-enabled training (exp 29+)
 
-**Current best: exp 35 — 21.8% avg MAE% (beats N5k baselines on ALL 4 nutrients)**
+**Current best: exp 36 — 21.3% avg MAE% (beats N5k baselines on ALL 4 nutrients)**
 
 ### What changed:
 - **FixedVisionDataset** replaces mlx-vlm's VisionDataset in train.py. The upstream VisionDataset passes `images=None` for Qwen models (`use_embedded_images=True`), causing `prepare_inputs` to take the text-only path. Result: `pixel_values=None`, vision tower completely bypassed. The fix passes actual images so the vision tower processes them.
@@ -328,7 +328,17 @@ Disk full at ~50 epochs. 277 checkpoints * 70MB = 18GB consumed all free space. 
 
 **Vision block scaling trend**: top-0=27.4%, top-2=25.4%(-2.0), top-4=24.0%(-1.4), top-6=23.0%(-1.0), top-8=21.8%(-1.2). No diminishing returns yet — last step was actually larger than previous.
 
-**Insight**: The trend is robust. More blocks continue to help without overfitting or format degradation. Next: continue scaling (top-12) and also re-include zero-calorie samples (user request).
+**Insight**: The trend is robust. More blocks continue to help without overfitting or format degradation.
+
+### Exp 36: Vision top-12 blocks r16 + zero-cal samples re-included — KEPT
+
+**Config**: Top 12 vision blocks (blocks 12-23), r16. Zero-calorie filter removed from data pipeline (2792 train / 349 val, +7% data). Two variables changed vs exp 35.
+
+**Result**: 17.9/19.2/27.0/21.0 = **21.3% avg** — new best! Protein -1.8pp (19.2%), fat -0.9pp (27.0%). Cal +0.1pp, carbs +0.6pp (flat). 1 parse failure. Val loss 0.366 (best yet). 426 min, 7.098 GB peak mem.
+
+**Caveat**: Val set changed (349 vs 326 samples) — not directly comparable to exp 35. Top-8→top-12 gain is only 0.5pp (with confounding data change), suggesting vision block scaling is hitting diminishing returns.
+
+**Insight**: Either the vision block scaling is plateauing or the zero-cal data slightly dilutes quality. Next: try higher vision rank (r32) with top-12 — a different axis of capacity.
 
 ---
 
