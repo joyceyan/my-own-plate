@@ -221,9 +221,9 @@ def main():
     print(f"Applied LoRA to {merger_lora_count} VL merger layers")
 
     # 3) Vision tower top-N blocks (lower rank to avoid disrupting pretrained features)
-    vision_lora_rank = 64  # match LLM rank
+    vision_lora_rank = 32  # moderate rank for full tower
     vision_blocks = model.vision_tower.blocks
-    num_vision_blocks = 12  # top 12 blocks (half the 24-block tower)
+    num_vision_blocks = 24  # all vision blocks
     vision_lora_count = 0
     for block in vision_blocks[-num_vision_blocks:]:
         for name, module in block.named_modules():
