@@ -37,7 +37,7 @@ All Phase 1 hyperparameter findings are suspect because the vision tower was nev
 
 ## Phase 2: Vision-enabled training (exp 29+)
 
-**Current best: exp 37 — 19.5% avg MAE% (beats N5k baselines on ALL 4 nutrients)**
+**Current best: exp 38 — 19.0% avg MAE% (beats N5k baselines on ALL 4 nutrients)**
 
 ### What changed:
 - **FixedVisionDataset** replaces mlx-vlm's VisionDataset in train.py. The upstream VisionDataset passes `images=None` for Qwen models (`use_embedded_images=True`), causing `prepare_inputs` to take the text-only path. Result: `pixel_values=None`, vision tower completely bypassed. The fix passes actual images so the vision tower processes them.
@@ -346,7 +346,15 @@ Disk full at ~50 epochs. 277 checkpoints * 70MB = 18GB consumed all free space. 
 
 **Result**: 16.3/19.4/23.4/18.9 = **19.5% avg** — new best! Cal -1.6pp, fat -3.6pp, carbs -2.1pp. Protein +0.2pp (flat). Fat dropped to 23.4% (10.8pp below N5k). 1 parse failure. 425 min, 7.144 GB peak mem, val loss 0.374.
 
-**Insight**: Higher vision rank is a powerful lever — 1.8pp average improvement from doubling rank alone. Vision blocks need substantial capacity to learn food-specific features. Next: try r64 vision rank (matching LLM) to see if gains continue.
+**Insight**: Higher vision rank is a powerful lever — 1.8pp average improvement from doubling rank alone. Vision blocks need substantial capacity to learn food-specific features.
+
+### Exp 38: Vision blocks r64 (matching LLM) with top-12 — KEPT
+
+**Config**: Same as exp 37 but vision LoRA rank 64 (was 32). All components now r64.
+
+**Result**: 16.0/20.0/22.7/17.4 = **19.0% avg** — new best! Cal -0.3pp, fat -0.7pp, carbs -1.5pp. Protein +0.6pp (within threshold). 1 parse failure. 431 min, 7.221 GB peak mem.
+
+**Vision rank scaling**: r16=21.3%, r32=19.5%(-1.8), r64=19.0%(-0.5). Diminishing returns. Next: try all 24 vision blocks at r32 — maximize block count with moderate rank.
 
 ---
 
