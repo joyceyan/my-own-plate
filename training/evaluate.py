@@ -126,7 +126,7 @@ def load_mlx_model(model_path: str, adapter_path: str = None, lora_rank: int = 1
                     lora_layer = LoRaLayer(module, lora_rank, lora_alpha, 0.0)
                     set_module_by_name(merger_module, name, lora_layer)
         # Vision tower top-N blocks LoRA (must match training config)
-        vision_lora_rank = 32
+        vision_lora_rank = 64
         num_vision_blocks = 12
         vision_blocks = model.vision_tower.blocks
         for block in vision_blocks[-num_vision_blocks:]:
