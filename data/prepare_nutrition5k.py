@@ -168,7 +168,6 @@ def main():
     # 2. Filter: missing images and empty ingredients
     skipped_image = 0
     skipped_ingredients = 0
-    skipped_zero_cal = 0
     valid_records = []
 
     for r in raw_records:
@@ -179,9 +178,6 @@ def main():
         if not r["ingredients"]:
             logger.warning("No ingredients for %s, skipping.", r["dish_id"])
             skipped_ingredients += 1
-            continue
-        if r["calories"] <= 0:
-            skipped_zero_cal += 1
             continue
         valid_records.append(r)
 
@@ -194,7 +190,7 @@ def main():
     write_jsonl(valid_records, all_jsonl_path)
 
     # 5. Print summary
-    total_skipped = skipped_image + skipped_ingredients + skipped_zero_cal
+    total_skipped = skipped_image + skipped_ingredients
     print(f"\n{'='*60}")
     print(f"Raw records loaded:     {total_raw}")
     print(f"Skipped (no image):     {skipped_image}")

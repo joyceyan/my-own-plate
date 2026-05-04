@@ -223,7 +223,7 @@ def main():
     # 3) Vision tower top-N blocks (lower rank to avoid disrupting pretrained features)
     vision_lora_rank = 16  # conservative rank for vision blocks
     vision_blocks = model.vision_tower.blocks
-    num_vision_blocks = 8  # top 8 blocks
+    num_vision_blocks = 12  # top 12 blocks (half the 24-block tower)
     vision_lora_count = 0
     for block in vision_blocks[-num_vision_blocks:]:
         for name, module in block.named_modules():
