@@ -37,7 +37,7 @@ All Phase 1 hyperparameter findings are suspect because the vision tower was nev
 
 ## Phase 2: Vision-enabled training (exp 29+)
 
-**Current best: exp 34 — 23.0% avg MAE% (beats N5k baselines on ALL 4 nutrients)**
+**Current best: exp 35 — 21.8% avg MAE% (beats N5k baselines on ALL 4 nutrients)**
 
 ### What changed:
 - **FixedVisionDataset** replaces mlx-vlm's VisionDataset in train.py. The upstream VisionDataset passes `images=None` for Qwen models (`use_embedded_images=True`), causing `prepare_inputs` to take the text-only path. Result: `pixel_values=None`, vision tower completely bypassed. The fix passes actual images so the vision tower processes them.
@@ -318,7 +318,17 @@ Disk full at ~50 epochs. 277 checkpoints * 70MB = 18GB consumed all free space. 
 
 **Vision block scaling trend**: top-0=27.4%, top-2=25.4%, top-4=24.0%, top-6=23.0%. Diminishing returns (~1pp/step) but still significant.
 
-**Insight**: The trend continues. More vision blocks = better. The model benefits from adapting increasingly deep visual features. Next: try top-8 to see if gains continue.
+**Insight**: The trend continues. More vision blocks = better. The model benefits from adapting increasingly deep visual features.
+
+### Exp 35: Vision tower top-8 blocks r16 + LLM r64 + merger r64 — KEPT
+
+**Config**: Same as exp 34 but top 8 vision blocks (blocks 16-23). 32 vision LoRA layers.
+
+**Result**: 17.8/21.0/27.9/20.4 = **21.8% avg** — new best! All nutrients improved vs exp 34 (-1.3/-0.2/-1.8/-1.5pp). Zero parse failures. 390 min training, 6.858 GB peak mem.
+
+**Vision block scaling trend**: top-0=27.4%, top-2=25.4%(-2.0), top-4=24.0%(-1.4), top-6=23.0%(-1.0), top-8=21.8%(-1.2). No diminishing returns yet — last step was actually larger than previous.
+
+**Insight**: The trend is robust. More blocks continue to help without overfitting or format degradation. Next: continue scaling (top-12) and also re-include zero-calorie samples (user request).
 
 ---
 
