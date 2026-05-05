@@ -37,7 +37,7 @@ All Phase 1 hyperparameter findings are suspect because the vision tower was nev
 
 ## Phase 2: Vision-enabled training (exp 29+)
 
-**Current best: exp 38 — 19.0% avg MAE% (beats N5k baselines on ALL 4 nutrients)**
+**Current best: exp 39 — 18.9% avg MAE% (beats N5k baselines on ALL 4 nutrients)**
 
 ### What changed:
 - **FixedVisionDataset** replaces mlx-vlm's VisionDataset in train.py. The upstream VisionDataset passes `images=None` for Qwen models (`use_embedded_images=True`), causing `prepare_inputs` to take the text-only path. Result: `pixel_values=None`, vision tower completely bypassed. The fix passes actual images so the vision tower processes them.
@@ -354,7 +354,15 @@ Disk full at ~50 epochs. 277 checkpoints * 70MB = 18GB consumed all free space. 
 
 **Result**: 16.0/20.0/22.7/17.4 = **19.0% avg** — new best! Cal -0.3pp, fat -0.7pp, carbs -1.5pp. Protein +0.6pp (within threshold). 1 parse failure. 431 min, 7.221 GB peak mem.
 
-**Vision rank scaling**: r16=21.3%, r32=19.5%(-1.8), r64=19.0%(-0.5). Diminishing returns. Next: try all 24 vision blocks at r32 — maximize block count with moderate rank.
+**Vision rank scaling**: r16=21.3%, r32=19.5%(-1.8), r64=19.0%(-0.5). Diminishing returns.
+
+### Exp 39: All 24 vision blocks at r32 — KEPT (marginal)
+
+**Config**: All 24 vision blocks (full tower) at r32. LLM r64, merger r64. 96 vision LoRA layers.
+
+**Result**: 15.8/17.7/24.6/17.3 = **18.9% avg** — marginal improvement (-0.1pp). Protein -2.3pp (17.7%) but fat +1.9pp (24.6%). 2 parse failures. 475 min, 7.945 GB peak mem.
+
+**Insight**: Full tower adaptation is at the plateau. Early vision blocks contain low-level features that don't benefit from LoRA. The protein-fat trade-off returns when adapting too many blocks. Vision exploration exhausted — need to pivot to other axes (LR, resolution).
 
 ---
 

@@ -38,3 +38,4 @@ experiment	cal_mae_pct	protein_mae_pct	fat_mae_pct	carbs_mae_pct	avg_mae_pct	par
 36	17.9	19.2	27.0	21.0	21.3	1	kept	vision top-12 r16 + zero-cal data: protein 19.2%, fat 27.0%
 37	16.3	19.4	23.4	18.9	19.5	1	kept	vision r32 top-12: fat -3.6pp to 23.4%, avg 19.5% new best
 38	16.0	20.0	22.7	17.4	19.0	1	kept	vision r64 top-12: carbs -1.5pp to 17.4%, vision rank diminishing
+39	15.8	17.7	24.6	17.3	18.9	2	kept	all 24 vision blocks r32: protein 17.7% but fat +1.9pp, plateau
