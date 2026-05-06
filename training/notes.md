@@ -37,7 +37,7 @@ All Phase 1 hyperparameter findings are suspect because the vision tower was nev
 
 ## Phase 2: Vision-enabled training (exp 29+)
 
-**Current best: exp 39 — 18.9% avg MAE% (beats N5k baselines on ALL 4 nutrients)**
+**Current best: exp 43 — 18.5% avg MAE% (beats N5k baselines on ALL 4 nutrients)**
 
 ### What changed:
 - **FixedVisionDataset** replaces mlx-vlm's VisionDataset in train.py. The upstream VisionDataset passes `images=None` for Qwen models (`use_embedded_images=True`), causing `prepare_inputs` to take the text-only path. Result: `pixel_values=None`, vision tower completely bypassed. The fix passes actual images so the vision tower processes them.
@@ -372,6 +372,16 @@ Disk full at ~50 epochs. 277 checkpoints * 70MB = 18GB consumed all free space. 
 
 ### Exp 42: 12 epochs with exp 38 config — REVERTED
 **Result**: 17.0/19.6/25.2/18.1 = 20.0% avg. Even 12ep overfits with r64 capacity. 10ep confirmed.
+
+### Exp 43: Cosine LR decay (1e-5 → 1e-6) with exp 38 config — KEPT
+
+**Config**: Cosine decay from 1e-5 to 1e-6 over all iterations. Top-12 vision r64, LLM r64, 10ep.
+
+**Result**: 15.5/17.9/23.4/17.3 = **18.5% avg** — new overall best! Cal -0.5pp, protein -2.1pp vs exp 38. Fat +0.7pp (within threshold). Carbs flat. 3 parse failures.
+
+**Training notes**: Val loss stabilized at 0.384-0.387 in final 2000 steps (vs exp 38's rising 0.370→0.379). Train loss 0.14 at end (vs exp 38's 0.12 — less overfitting). 429 min.
+
+**Insight**: Cosine decay prevents late-stage overfitting. The decaying LR lets early epochs learn aggressively while later epochs fine-tune without degrading. This is likely optimal for constant-capacity models where late training tends to overfit. Next: try cosine decay with exp 39 config (all 24 blocks r32) — may improve that too.
 
 ---
 
