@@ -362,7 +362,16 @@ Disk full at ~50 epochs. 277 checkpoints * 70MB = 18GB consumed all free space. 
 
 **Result**: 15.8/17.7/24.6/17.3 = **18.9% avg** — marginal improvement (-0.1pp). Protein -2.3pp (17.7%) but fat +1.9pp (24.6%). 2 parse failures. 475 min, 7.945 GB peak mem.
 
-**Insight**: Full tower adaptation is at the plateau. Early vision blocks contain low-level features that don't benefit from LoRA. The protein-fat trade-off returns when adapting too many blocks. Vision exploration exhausted — need to pivot to other axes (LR, resolution).
+**Insight**: Full tower adaptation is at the plateau. Early vision blocks contain low-level features that don't benefit from LoRA. The protein-fat trade-off returns when adapting too many blocks.
+
+### Exp 40: Learning rate 2e-5 — REVERTED
+**Result**: 20.1/22.6/28.2/21.4 = 23.1% avg. All worse, fat +5.5pp. 1e-5 confirmed optimal.
+
+### Exp 41: Image resolution 512x512 — REVERTED (crash)
+**Result**: Metal GPU timeout at iter 4760. 512x512 too heavy for M2 Pro. 384x384 is max.
+
+### Exp 42: 12 epochs with exp 38 config — REVERTED
+**Result**: 17.0/19.6/25.2/18.1 = 20.0% avg. Even 12ep overfits with r64 capacity. 10ep confirmed.
 
 ---
 

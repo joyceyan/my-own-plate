@@ -39,3 +39,6 @@ experiment	cal_mae_pct	protein_mae_pct	fat_mae_pct	carbs_mae_pct	avg_mae_pct	par
 37	16.3	19.4	23.4	18.9	19.5	1	kept	vision r32 top-12: fat -3.6pp to 23.4%, avg 19.5% new best
 38	16.0	20.0	22.7	17.4	19.0	1	kept	vision r64 top-12: carbs -1.5pp to 17.4%, vision rank diminishing
 39	15.8	17.7	24.6	17.3	18.9	2	kept	all 24 vision blocks r32: protein 17.7% but fat +1.9pp, plateau
+40	20.1	22.6	28.2	21.4	23.1	0	reverted	lr=2e-5: all nutrients worse, fat +5.5pp, overfitting
+41	-	-	-	-	-	crash	reverted	512x512 resolution: Metal GPU timeout at iter 4760, hardware limit
+42	17.0	19.6	25.2	18.1	20.0	2	reverted	12ep with exp 38 config: +1.0pp avg, overfitting at 12ep too

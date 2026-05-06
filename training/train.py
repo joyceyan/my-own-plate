@@ -221,9 +221,9 @@ def main():
     print(f"Applied LoRA to {merger_lora_count} VL merger layers")
 
     # 3) Vision tower top-N blocks (lower rank to avoid disrupting pretrained features)
-    vision_lora_rank = 32  # moderate rank for full tower
+    vision_lora_rank = 64  # match LLM rank
     vision_blocks = model.vision_tower.blocks
-    num_vision_blocks = 24  # all vision blocks
+    num_vision_blocks = 12  # top 12 blocks
     vision_lora_count = 0
     for block in vision_blocks[-num_vision_blocks:]:
         for name, module in block.named_modules():
@@ -237,7 +237,8 @@ def main():
     # ------------------------------------------------------------------
     # Train
     # ------------------------------------------------------------------
-    optimizer = optim.Adam(learning_rate=args.learning_rate)
+    lr_schedule = optim.cosine_decay(args.learning_rate, iters, 1e-6)
+    optimizer = optim.Adam(learning_rate=lr_schedule)
 
     training_args = TrainingArgs(
         batch_size=args.batch_size,
