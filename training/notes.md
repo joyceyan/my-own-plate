@@ -37,7 +37,7 @@ All Phase 1 hyperparameter findings are suspect because the vision tower was nev
 
 ## Phase 2: Vision-enabled training (exp 29+)
 
-**Current best: exp 43 — 18.5% avg MAE% (beats N5k baselines on ALL 4 nutrients)**
+**Current best: exp 44 — 18.1% avg MAE% (beats N5k baselines on ALL 4 nutrients)**
 
 ### What changed:
 - **FixedVisionDataset** replaces mlx-vlm's VisionDataset in train.py. The upstream VisionDataset passes `images=None` for Qwen models (`use_embedded_images=True`), causing `prepare_inputs` to take the text-only path. Result: `pixel_values=None`, vision tower completely bypassed. The fix passes actual images so the vision tower processes them.
@@ -381,7 +381,19 @@ Disk full at ~50 epochs. 277 checkpoints * 70MB = 18GB consumed all free space. 
 
 **Training notes**: Val loss stabilized at 0.384-0.387 in final 2000 steps (vs exp 38's rising 0.370→0.379). Train loss 0.14 at end (vs exp 38's 0.12 — less overfitting). 429 min.
 
-**Insight**: Cosine decay prevents late-stage overfitting. The decaying LR lets early epochs learn aggressively while later epochs fine-tune without degrading. This is likely optimal for constant-capacity models where late training tends to overfit. Next: try cosine decay with exp 39 config (all 24 blocks r32) — may improve that too.
+**Insight**: Cosine decay prevents late-stage overfitting. The decaying LR lets early epochs learn aggressively while later epochs fine-tune without degrading.
+
+### Exp 44: Cosine LR decay + all 24 vision blocks r32 — KEPT
+
+**Config**: Cosine decay (1e-5→1e-6). All 24 vision blocks r32, LLM r64, merger r64, 10ep.
+
+**Result**: 15.0/16.9/22.3/18.3 = **18.1% avg** — new best! Fat 22.3% (-2.3pp vs exp 39). Protein 16.9% (-0.8pp). 1 parse failure. 466 min.
+
+### Exp 45: 12 epochs with cosine LR + all 24 blocks r32 — REVERTED
+
+**Result**: 15.7/17.2/23.6/18.6 = 18.8% avg. Even cosine can't save 12ep. 10ep is a hard ceiling.
+
+**Phase 2 exploration summary**: Vision fix was transformative (59.6→28.1%). Vision tower LoRA + higher rank + cosine decay brought it to 18.1%. Axes exhausted: rank, blocks, epochs, LR, resolution. Further gains likely require larger model, more data, or higher resolution (needs more GPU RAM).
 
 ---
 
