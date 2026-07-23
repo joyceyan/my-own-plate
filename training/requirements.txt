@@ -1,8 +1,17 @@
-transformers
-peft
-trl
-bitsandbytes
-accelerate
-torch
+# HF/PEFT/TRL training pipeline for Qwen3-VL on Apple Silicon (no mlx-vlm/mlx-lm).
+# Use with the project .venv:
+#   python -m venv --system-site-packages .venv
+#   source .venv/bin/activate
+#   pip install -r training/requirements_hf.txt
+
+transformers>=4.57.0
+peft>=0.15.0
+accelerate>=1.0.0
+trl>=0.20.0
 pillow
-pandas
+numpy
+scipy
+datasets
+qwen-vl-utils
+protobuf
+sentencepiece

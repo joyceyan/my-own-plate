@@ -1,159 +1,201 @@
 """
-Merge LoRA adapters into the base model and export to GGUF (Q4_K_M).
+Merge HF PEFT + custom vision LoRA adapters into the base model and export to GGUF.
 
 Steps:
-  1. Load base model + LoRA adapter weights via mlx-vlm
-  2. Fuse LoRA layers into the base weights
-  3. Save the merged model
-  4. Convert to GGUF Q4_K_M via llama.cpp's convert_hf_to_gguf.py
+  1. Load base HF model + PEFT adapter + custom vision LoRA weights
+  2. Merge PEFT LoRA into base weights (merge_and_unload)
+  3. Merge custom vision LoRA into base weights (manual fuse)
+  4. Save as standard HF safetensors
+  5. Convert text model to GGUF Q4_K_M via llama.cpp
+  6. Export vision projector to GGUF F16 via llama.cpp --mmproj
+
+Usage:
+    source .venv/bin/activate
+    python merge_and_export.py \
+        --model training/cache/Qwen3-VL-2B-Instruct \
+        --adapter-dir training/output/adapter \
+        --vision-lora training/output/vision_lora.pt \
+        --output-dir training/output/gguf
 """
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-import mlx.core as mx
-from mlx.utils import tree_flatten, tree_unflatten
+import torch
+from transformers import AutoModelForImageTextToText, AutoProcessor
+from peft import PeftModel
+
+from hf_utils import (
+    apply_vision_block_lora,
+    apply_projector_lora,
+    load_custom_lora,
+    merge_custom_lora,
+)
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Merge LoRA adapter and export to GGUF"
+        description="Merge HF adapters and export to GGUF"
     )
     parser.add_argument(
-        "--model", type=str, default="mlx-community/Qwen3-VL-2B-Instruct-bf16",
-        help="Base model HF ID or local path",
+        "--model",
+        type=str,
+        default="training/cache/Qwen3-VL-2B-Instruct",
+        help="Base HF model path or repo ID",
     )
     parser.add_argument(
-        "--adapter-path", type=str, default="./output/adapters",
-        help="Path to directory containing adapters.safetensors",
+        "--adapter-dir",
+        type=str,
+        default="~/src/my-own-plate/training/output/adapter",
+        help="PEFT adapter directory",
     )
     parser.add_argument(
-        "--output-dir", type=str, default="./output",
-        help="Root output directory",
+        "--vision-lora",
+        type=str,
+        default="~/src/my-own-plate/training/output/vision_lora.pt",
+        help="Custom vision LoRA checkpoint",
     )
     parser.add_argument(
-        "--llama-cpp-dir", type=str, default=None,
-        help="Path to llama.cpp repo (for GGUF conversion). "
-             "If not set, searches common locations or $LLAMA_CPP_DIR.",
+        "--output-dir",
+        type=str,
+        default="~/src/my-own-plate/training/output/gguf",
+        help="Output directory for GGUF files and merged HF model",
+    )
+    parser.add_argument(
+        "--llama-cpp-dir",
+        type=str,
+        default="~/src/llama.cpp",
+        help="Path to llama.cpp checkout",
+    )
+    parser.add_argument(
+        "--quantization",
+        type=str,
+        default="q4_k_m",
+        help="Quantization type for the language model GGUF",
+    )
+    parser.add_argument(
+        "--keep-merged-hf",
+        action="store_true",
+        help="Keep the merged HF model directory after GGUF conversion",
     )
     return parser.parse_args()
 
 
-def find_llama_cpp(hint: str = None) -> Path:
-    """Locate llama.cpp's convert_hf_to_gguf.py."""
-    candidates = []
-    if hint:
-        candidates.append(Path(hint))
-    env = os.environ.get("LLAMA_CPP_DIR")
-    if env:
-        candidates.append(Path(env))
-    candidates += [
-        Path.home() / "src" / "llama.cpp",
-        Path.home() / "llama.cpp",
-        Path("/opt/llama.cpp"),
-    ]
-    for d in candidates:
-        script = d / "convert_hf_to_gguf.py"
-        if script.is_file():
-            return script
-    return None
-
-
 def main():
     args = parse_args()
-    args.adapter_path = os.path.expanduser(args.adapter_path)
+    args.adapter_dir = os.path.expanduser(args.adapter_dir)
+    args.vision_lora = os.path.expanduser(args.vision_lora)
     args.output_dir = os.path.expanduser(args.output_dir)
+    args.llama_cpp_dir = os.path.expanduser(args.llama_cpp_dir)
 
-    merged_dir = Path(args.output_dir) / "merged"
+    output_dir = Path(args.output_dir)
+    merged_dir = output_dir / "merged_hf"
+    output_dir.mkdir(parents=True, exist_ok=True)
     merged_dir.mkdir(parents=True, exist_ok=True)
-    gguf_path = Path(args.output_dir) / "myownplate-q4km.gguf"
+
+    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    print(f"Using device: {device}")
 
     # ------------------------------------------------------------------
-    # 1. Load base model + adapter, fuse LoRA layers
+    # 1. Load base model
     # ------------------------------------------------------------------
-    from mlx_vlm.utils import load
-
-    print(f"Loading model {args.model} with adapter from {args.adapter_path}")
-    model, processor = load(
+    print(f"\n[1/6] Loading base model from {args.model}")
+    processor = AutoProcessor.from_pretrained(args.model, trust_remote_code=True)
+    model = AutoModelForImageTextToText.from_pretrained(
         args.model,
-        adapter_path=args.adapter_path,
-        processor_config={"trust_remote_code": True},
+        trust_remote_code=True,
+        dtype=torch.float16,
+        device_map=device,
     )
 
-    # Fuse any LoRA layers back into the base linear layers
-    fused_linears = [
-        (n, m.fuse())
-        for n, m in model.named_modules()
-        if hasattr(m, "fuse")
-    ]
-    if fused_linears:
-        model.update_modules(tree_unflatten(fused_linears))
-        print(f"Fused {len(fused_linears)} LoRA layers into base weights")
-    else:
-        print("Warning: no LoRA layers found to fuse")
+    # ------------------------------------------------------------------
+    # 2. Load PEFT adapter (LLM only), then merge it into base weights
+    # ------------------------------------------------------------------
+    print("\n[2/6] Loading PEFT adapter and merging")
+    model = PeftModel.from_pretrained(model, args.adapter_dir)
+    model = model.merge_and_unload()
 
     # ------------------------------------------------------------------
-    # 2. Save merged model
+    # 3. Apply custom vision LoRA scaffolding and load trained weights
     # ------------------------------------------------------------------
-    print(f"Saving merged model to: {merged_dir}")
-    weights = dict(tree_flatten(model.parameters()))
-    mx.save_safetensors(str(merged_dir / "model.safetensors"), weights)
-
-    # Copy tokenizer/processor files from the base model cache
-    from huggingface_hub import snapshot_download
-    base_path = snapshot_download(args.model)
-    import shutil
-    for fname in ["config.json", "tokenizer.json", "tokenizer_config.json",
-                  "special_tokens_map.json", "preprocessor_config.json",
-                  "chat_template.json", "generation_config.json"]:
-        src = Path(base_path) / fname
-        if src.exists():
-            shutil.copy2(src, merged_dir / fname)
-
-    print("Merged model saved.")
+    print("\n[3/6] Loading custom vision LoRA")
+    apply_vision_block_lora(model, r=32, alpha=32, dropout=0.0)
+    apply_projector_lora(model, r=64, alpha=64, dropout=0.0)
+    load_custom_lora(model, args.vision_lora)
 
     # ------------------------------------------------------------------
-    # 3. Convert to GGUF Q4_K_M
+    # 4. Merge custom vision LoRA into base weights
     # ------------------------------------------------------------------
-    convert_script = find_llama_cpp(args.llama_cpp_dir)
-    if convert_script is None:
-        print(
-            "\nllama.cpp not found. To produce the GGUF file, either:\n"
-            "  - Set --llama-cpp-dir /path/to/llama.cpp\n"
-            "  - Set env var LLAMA_CPP_DIR=/path/to/llama.cpp\n"
-            "  - Clone llama.cpp to ~/src/llama.cpp\n"
-            "\nThen re-run this script, or manually run:\n"
-            f"  python convert_hf_to_gguf.py {merged_dir} "
-            f"--outfile {gguf_path} --outtype q4_k_m"
-        )
+    print("\n[4/6] Merging custom vision LoRA")
+    model = merge_custom_lora(model)
+    print("All adapters merged into base weights")
+
+    # ------------------------------------------------------------------
+    # 5. Save merged HF model
+    # ------------------------------------------------------------------
+    print(f"\n[5/6] Saving merged HF model to {merged_dir}")
+    # Move to CPU for stable saving; safetensors can handle either, but this
+    # avoids any MPS-specific quirks during export.
+    model = model.to("cpu")
+    model.save_pretrained(merged_dir)
+    processor.save_pretrained(merged_dir)
+    print(f"Saved merged HF model ({sum(f.stat().st_size for f in merged_dir.rglob('*') if f.is_file()) / 1e9:.2f} GB)")
+
+    # ------------------------------------------------------------------
+    # 5. Convert to GGUF
+    # ------------------------------------------------------------------
+    convert_script = Path(args.llama_cpp_dir) / "convert_hf_to_gguf.py"
+    if not convert_script.exists():
+        print(f"ERROR: llama.cpp not found at {args.llama_cpp_dir}")
+        print("Clone it: git clone https://github.com/ggerganov/llama.cpp.git ~/src/llama.cpp")
         sys.exit(1)
 
-    print(f"Converting to GGUF Q4_K_M using: {convert_script}")
-    cmd = [
+    gguf_lm = output_dir / f"myownplate-{args.quantization}.gguf"
+    gguf_f16 = output_dir / "myownplate-f16.gguf"
+    gguf_mmproj = output_dir / "mmproj-myownplate-f16.gguf"
+
+    print(f"\n[5/6] Converting language model to GGUF F16")
+    subprocess.run([
         sys.executable, str(convert_script),
         str(merged_dir),
-        "--outfile", str(gguf_path),
-        "--outtype", "q4_k_m",
-    ]
-    print(f"Running: {' '.join(cmd)}")
-    result = subprocess.run(cmd, check=False)
+        "--outfile", str(gguf_f16),
+        "--outtype", "f16",
+    ], check=True)
 
-    if result.returncode != 0:
-        print(f"\nGGUF conversion failed (exit code {result.returncode}).")
+    print(f"\n[6/6] Quantizing language model to {args.quantization.upper()}")
+    quantize_bin = Path(args.llama_cpp_dir) / "build" / "bin" / "llama-quantize"
+    if not quantize_bin.exists():
+        print(f"ERROR: {quantize_bin} not found. Build llama.cpp first.")
         sys.exit(1)
+    subprocess.run([
+        str(quantize_bin),
+        str(gguf_f16),
+        str(gguf_lm),
+        args.quantization,
+    ], check=True)
+    gguf_f16.unlink()
 
-    # ------------------------------------------------------------------
-    # 4. Report final size
-    # ------------------------------------------------------------------
-    if gguf_path.exists():
-        size_gb = gguf_path.stat().st_size / (1024 ** 3)
-        print(f"\nGGUF file: {gguf_path}")
-        print(f"File size: {size_gb:.2f} GB")
-    else:
-        print(f"\nWarning: expected GGUF at {gguf_path} but file not found.")
+    print(f"\nExporting vision projector to GGUF F16 (--mmproj)")
+    subprocess.run([
+        sys.executable, str(convert_script),
+        str(merged_dir),
+        "--outfile", str(gguf_mmproj),
+        "--mmproj",
+    ], check=True)
+
+    if not args.keep_merged_hf:
+        print(f"\nCleaning up merged HF directory {merged_dir}")
+        shutil.rmtree(merged_dir)
+
+    print("\n" + "=" * 60)
+    print("Export complete")
+    print(f"  Language model: {gguf_lm} ({gguf_lm.stat().st_size / 1e9:.2f} GB)")
+    print(f"  Vision projector: {gguf_mmproj} ({gguf_mmproj.stat().st_size / 1e6:.0f} MB)")
+    print("=" * 60)
 
 
 if __name__ == "__main__":

@@ -1,28 +1,25 @@
 """
-Convert Nutrition5k JSONL into a HuggingFace Dataset with train/val/test splits.
+Convert Nutrition5k JSONL splits into a HuggingFace Dataset with chat messages.
 
-Reads nutrition5k_all.jsonl (produced by data/prepare_nutrition5k.py),
-splits into train/validation/test, and saves:
-  - HuggingFace parquet dataset (for mlx-vlm training)
-  - Per-split JSONL files (for human readability and evaluate.py)
+Reads the train/validation/test JSONL files produced by convert_dataset.py and
+writes data/nutrition5k_hf_chat/ as a HuggingFace parquet dataset with columns:
+    - image (PIL)
+    - messages (standard HF chat format, image as a placeholder dict)
 
-All split logic lives here — prepare_nutrition5k.py just cleans and outputs
-a single JSONL with all valid samples.
+The actual image object is passed to the processor separately; the message
+content only contains a placeholder of type 'image' so the chat template renders
+<|vision_start|><|image_pad|><|vision_end|>.
 """
 
 import argparse
 import json
-import os
-import re
 from pathlib import Path
 
-import numpy as np
-from datasets import Dataset, Features, Image, Value
+from datasets import Dataset, Features, Image, Sequence, Value
 
 
 def load_jsonl(path: str):
     records = []
-    skipped = 0
     with open(path) as f:
         for line in f:
             line = line.strip()
@@ -30,143 +27,75 @@ def load_jsonl(path: str):
                 continue
             row = json.loads(line)
             img_path = row["image_path"]
-            if not os.path.exists(img_path):
-                skipped += 1
-                continue
-            records.append({
-                "image": img_path,
-                "question": row["prompt"],
-                "answer": row["completion"],
-                # Keep original fields for JSONL re-export
-                "_image_path": row["image_path"],
-                "_prompt": row["prompt"],
-                "_completion": row["completion"],
-            })
-    if skipped:
-        print(f"  Skipped {skipped} samples with missing images")
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image"},
+                        {"type": "text", "text": row["prompt"]},
+                    ],
+                },
+                {"role": "assistant", "content": row["completion"]},
+            ]
+            records.append({"image": img_path, "messages": messages})
     return records
-
-
-def write_split_jsonl(records, path):
-    """Write a split back to JSONL format for human readability."""
-    with open(path, "w") as f:
-        for r in records:
-            entry = {
-                "image_path": r["_image_path"],
-                "prompt": r["_prompt"],
-                "completion": r["_completion"],
-            }
-            f.write(json.dumps(entry) + "\n")
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Split Nutrition5k JSONL into train/val/test HuggingFace datasets"
+        description="Convert Nutrition5k JSONL splits to HF chat-message dataset"
     )
     parser.add_argument(
-        "--input", type=str,
-        default="~/src/my-own-plate/data/nutrition5k_all.jsonl",
-        help="Path to the complete JSONL (from prepare_nutrition5k.py)",
-    )
-    parser.add_argument(
-        "--output-dir", type=str,
-        default="~/src/my-own-plate/data/nutrition5k_hf",
-        help="Output directory for HuggingFace parquet dataset",
-    )
-    parser.add_argument(
-        "--jsonl-dir", type=str,
+        "--jsonl-dir",
+        type=str,
         default="~/src/my-own-plate/data",
-        help="Output directory for per-split JSONL files",
+        help="Directory containing nutrition5k_{train,validation,test}.jsonl",
     )
     parser.add_argument(
-        "--train-ratio", type=float, default=0.80,
-        help="Fraction for training (default: 0.80)",
+        "--output-dir",
+        type=str,
+        default="~/src/my-own-plate/data/nutrition5k_hf_chat",
+        help="Output directory for HF chat dataset",
     )
-    parser.add_argument(
-        "--val-ratio", type=float, default=0.10,
-        help="Fraction for validation (default: 0.10)",
-    )
-    # test ratio is implicitly 1 - train - val
-    parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
-    args.input = os.path.expanduser(args.input)
-    args.output_dir = os.path.expanduser(args.output_dir)
-    args.jsonl_dir = os.path.expanduser(args.jsonl_dir)
+    args.jsonl_dir = Path(args.jsonl_dir).expanduser()
+    args.output_dir = Path(args.output_dir).expanduser()
+    args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    test_ratio = 1.0 - args.train_ratio - args.val_ratio
-    if test_ratio < 0:
-        print(f"Error: train_ratio + val_ratio > 1.0")
-        return
-
-    # Load all records
-    print(f"Loading data from {args.input}")
-    all_records = load_jsonl(args.input)
-    print(f"  {len(all_records)} valid samples")
-
-    # Group records by dish ID to prevent leakage across splits.
-    # A dish may have multiple images (overhead, side angles, augmentations) —
-    # all images for a given dish must land in the same split.
-    dish_to_records = {}
-    for r in all_records:
-        # Extract dish ID from path like .../dish_1572029300/rgb.png
-        match = re.search(r'dish_\d+', r["_image_path"])
-        dish_id = match.group() if match else r["_image_path"]
-        dish_to_records.setdefault(dish_id, []).append(r)
-
-    dish_ids = list(dish_to_records.keys())
-    print(f"  {len(dish_ids)} unique dishes")
-
-    # Shuffle and split at the dish level
-    np.random.seed(args.seed)
-    dish_ids = [dish_ids[i] for i in np.random.permutation(len(dish_ids))]
-
-    n_train = int(len(dish_ids) * args.train_ratio)
-    n_val = int(len(dish_ids) * args.val_ratio)
-
-    train_dishes = dish_ids[:n_train]
-    val_dishes = dish_ids[n_train:n_train + n_val]
-    test_dishes = dish_ids[n_train + n_val:]
-
-    train_records = [r for d in train_dishes for r in dish_to_records[d]]
-    val_records = [r for d in val_dishes for r in dish_to_records[d]]
-    test_records = [r for d in test_dishes for r in dish_to_records[d]]
-
-    print(f"  Split: {len(train_records)} train / {len(val_records)} val / {len(test_records)} test")
-
-    # HuggingFace parquet features (exclude internal _fields)
     features = Features({
         "image": Image(),
-        "question": Value("string"),
-        "answer": Value("string"),
+        "messages": Sequence(
+            {
+                "role": Value("string"),
+                "content": Value("string"),
+            }
+        ),
     })
 
-    def to_hf_records(records):
-        return [{"image": r["image"], "question": r["question"], "answer": r["answer"]}
-                for r in records]
+    # Content is normally a string or a list; HF datasets can't easily store
+    # heterogeneous nested lists. We store messages as a JSON string instead and
+    # parse them in the training script. This keeps the dataset simple and
+    # avoids complex schema gymnastics.
+    features = Features({
+        "image": Image(),
+        "messages_json": Value("string"),
+    })
 
-    # Save parquet
-    out = Path(args.output_dir)
-    out.mkdir(parents=True, exist_ok=True)
+    for split in ["train", "validation", "test"]:
+        path = args.jsonl_dir / f"nutrition5k_{split}.jsonl"
+        if not path.exists():
+            print(f"WARNING: {path} not found, skipping")
+            continue
+        records = load_jsonl(str(path))
+        # Convert messages to JSON string for storage
+        for r in records:
+            r["messages_json"] = json.dumps(r.pop("messages"))
+        ds = Dataset.from_list(records, features=features)
+        ds.to_parquet(args.output_dir / f"{split}.parquet")
+        print(f"{split}: {len(ds)} samples -> {args.output_dir / f'{split}.parquet'}")
 
-    # Clean old files first
-    for f in out.glob("*.parquet"):
-        f.unlink()
-
-    print(f"\nSaving parquet to {out}")
-    for name, recs in [("train", train_records), ("validation", val_records), ("test", test_records)]:
-        Dataset.from_list(to_hf_records(recs), features=features).to_parquet(out / f"{name}.parquet")
-
-    # Save per-split JSONL
-    jsonl_dir = Path(args.jsonl_dir)
-    jsonl_dir.mkdir(parents=True, exist_ok=True)
-    print(f"Saving JSONL splits to {jsonl_dir}")
-    for name, recs in [("train", train_records), ("validation", val_records), ("test", test_records)]:
-        write_split_jsonl(recs, jsonl_dir / f"nutrition5k_{name}.jsonl")
-
-    print(f"\nDone.")
-    print(f"  Parquet: {out}/{{train,validation,test}}.parquet")
-    print(f"  JSONL:   {jsonl_dir}/nutrition5k_{{train,validation,test}}.jsonl")
+    print(f"\nDone. Chat dataset saved to {args.output_dir}")
 
 
 if __name__ == "__main__":

@@ -1,275 +1,434 @@
 """
-LoRA fine-tuning for Qwen3-VL-2B-Instruct on the Nutrition5k dataset using mlx-vlm.
+LoRA fine-tune Qwen3-VL-2B-Instruct on Nutrition5k using HF transformers + PEFT.
 
-Unlike mlx-lm (which strips the vision tower), mlx-vlm keeps the full VL pipeline
-so the model actually sees food images during training.
+This replaces the mlx-vlm training pipeline to avoid the MLX→GGUF accuracy
+degradation. The vision tower is trained with manual LoRA (rank 32), while the
+language model and vision-language projector use PEFT LoRA (rank 64).
 
-Calls mlx-vlm internals directly (rather than subprocess) to support validation
-during training — mlx-vlm's CLI hardcodes val_dataset=None.
+Prerequisites:
+    python -m venv --system-site-packages .venv
+    source .venv/bin/activate
+    pip install -r training/requirements_hf.txt
+    python training/convert_dataset_hf.py
 
 Usage:
-    python train.py --train-data ~/src/my-own-plate/data/nutrition5k_hf
+    source .venv/bin/activate
+    python training/train.py --model training/cache/Qwen3-VL-2B-Instruct
+
+The default paths assume the project is at ~/src/my-own-plate.
 """
 
 import argparse
-import logging
+import json
 import os
-import sys
+from dataclasses import dataclass, field
+from pathlib import Path
 
-import mlx.core as mx
-import mlx.optimizers as optim
+import torch
+from torch.utils.data import Dataset
+from PIL import Image as PILImage
+
+from transformers import (
+    AutoModelForImageTextToText,
+    AutoProcessor,
+    Trainer,
+    TrainingArguments,
+)
+from transformers.trainer_utils import get_last_checkpoint
+from torch.optim.lr_scheduler import CosineAnnealingLR
 from datasets import load_dataset
+from peft import get_peft_model
 
-from mlx_vlm.lora import transform_dataset_to_messages
-from mlx_vlm.trainer.datasets import VisionDataset, get_prompt
-from mlx_vlm.trainer.sft_trainer import TrainingArgs, train
-from mlx_vlm.trainer.utils import print_trainable_parameters
-from mlx_vlm.utils import load, prepare_inputs
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from hf_utils import (
+    apply_vision_block_lora,
+    apply_projector_lora,
+    get_peft_lora_config,
+    print_trainable_parameters,
+    save_custom_lora,
+    LLM_LORA_TARGETS,
+)
 
 
 # ---------------------------------------------------------------------------
-# Fixed VisionDataset — passes images through the vision pipeline
+# Dataset / data collator
 # ---------------------------------------------------------------------------
 
-class FixedVisionDataset:
-    """
-    Drop-in replacement for mlx_vlm's VisionDataset that actually processes
-    images through the vision pipeline for Qwen models.
+class NutritionDataset(Dataset):
+    """Dataset that returns pre-tokenized tensors for one image+conversation."""
 
-    Bug: VisionDataset sets images=None for Qwen (use_embedded_images=True),
-    which causes prepare_inputs to take the text-only path. Result: pixel_values
-    is None, the vision tower is bypassed, and training is text-only.
-
-    Fix: always pass images to prepare_inputs so pixel_values are computed.
-    """
-
-    def __init__(self, hf_dataset, config, processor, image_resize_shape=None):
+    def __init__(self, hf_dataset, processor, system_prompt=None):
         self.dataset = hf_dataset
         self.processor = processor
-        self.config = config
-        self.image_resize_shape = tuple(image_resize_shape) if image_resize_shape else None
+        self.system_prompt = system_prompt
 
     def __len__(self):
         return len(self.dataset)
 
     def __getitem__(self, idx):
-        return self.process(self.dataset[idx])
+        item = self.dataset[idx]
+        image = item["image"]
+        if isinstance(image, str):
+            image = PILImage.open(image).convert("RGB")
 
-    def process(self, item):
-        images = item.get("images", item.get("image", []))
-        if not isinstance(images, list):
-            images = [images] if images else []
+        messages = json.loads(item["messages_json"])
 
-        conversations = item.get("messages", item.get("conversations"))
-        model_type = self.config.get("model_type")
-        prompt = get_prompt(model_type, self.processor, conversations)
+        # Optionally prepend a system message
+        if self.system_prompt is not None:
+            messages = [{"role": "system", "content": self.system_prompt}] + messages
 
-        image_token_index = self.config.get("image_token_index") or \
-                            self.config.get("image_token_id")
-
-        inputs = prepare_inputs(
-            processor=self.processor,
-            images=images if images else None,
-            prompts=[prompt],
-            image_token_index=image_token_index,
-            resize_shape=self.image_resize_shape,
+        # Full conversation (used for labels)
+        full_text = self.processor.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=False
+        )
+        # Prompt-only conversation (used to mask non-completion tokens)
+        prompt_messages = messages[:-1] + [{"role": "assistant", "content": ""}]
+        prompt_text = self.processor.apply_chat_template(
+            prompt_messages, tokenize=False, add_generation_prompt=False
         )
 
-        # prepare_inputs returns tensors with a leading batch dim (1, N).
-        # iterate_batches expects per-sample tensors — squeeze batch dim
-        # from input_ids/attention_mask so len() returns the sequence length.
-        result = {}
-        for k, v in inputs.items():
-            if isinstance(v, mx.array) and v.ndim >= 2 and v.shape[0] == 1:
-                if k in ("input_ids", "attention_mask"):
-                    v = v.squeeze(0)
-            result[k] = v
+        # Process images and text together; keep the batch dimension
+        inputs = self.processor(
+            text=full_text,
+            images=image,
+            return_tensors="pt",
+        )
+        prompt_inputs = self.processor(
+            text=prompt_text,
+            images=image,
+            return_tensors="pt",
+        )
+
+        input_ids = inputs["input_ids"].squeeze(0)
+        labels = input_ids.clone()
+        prompt_len = prompt_inputs["input_ids"].shape[1]
+        labels[:prompt_len] = -100
+
+        result = {
+            "input_ids": input_ids,
+            "attention_mask": inputs["attention_mask"].squeeze(0),
+            "labels": labels,
+        }
+        if "pixel_values" in inputs:
+            result["pixel_values"] = inputs["pixel_values"].squeeze(0)
+        if "image_grid_thw" in inputs:
+            result["image_grid_thw"] = inputs["image_grid_thw"].squeeze(0)
+        if "image_embed_seqlen" in inputs:
+            result["image_embed_seqlen"] = inputs["image_embed_seqlen"].squeeze(0)
+        return result
+
+
+class VLDataCollator:
+    """Pad sequences and stack image tensors for a batch of VL samples."""
+
+    def __init__(self, pad_token_id: int):
+        self.pad_token_id = pad_token_id
+
+    def __call__(self, batch: list[dict]) -> dict:
+        max_len = max(len(b["input_ids"]) for b in batch)
+
+        input_ids = []
+        attention_mask = []
+        labels = []
+        for b in batch:
+            seq_len = len(b["input_ids"])
+            pad_len = max_len - seq_len
+            input_ids.append(
+                torch.cat([b["input_ids"], torch.full((pad_len,), self.pad_token_id, dtype=torch.long)])
+            )
+            attention_mask.append(
+                torch.cat([b["attention_mask"], torch.zeros(pad_len, dtype=torch.long)])
+            )
+            labels.append(
+                torch.cat([b["labels"], torch.full((pad_len,), -100, dtype=torch.long)])
+            )
+
+        result = {
+            "input_ids": torch.stack(input_ids),
+            "attention_mask": torch.stack(attention_mask),
+            "labels": torch.stack(labels),
+        }
+
+        # Stack pixel_values along the patch dimension (variable patch count is
+        # allowed if images have different resolutions, but we force 384x384).
+        if "pixel_values" in batch[0]:
+            result["pixel_values"] = torch.stack([b["pixel_values"] for b in batch])
+        if "image_grid_thw" in batch[0]:
+            result["image_grid_thw"] = torch.stack([b["image_grid_thw"] for b in batch])
+        if "image_embed_seqlen" in batch[0]:
+            result["image_embed_seqlen"] = torch.stack([b["image_embed_seqlen"] for b in batch])
 
         return result
 
 
+class NutritionTrainer(Trainer):
+    """Trainer with cosine decay from peak LR down to a configurable minimum LR."""
+
+    def create_scheduler(self, num_training_steps: int, optimizer=None):
+        if self.lr_scheduler is None:
+            optimizer = optimizer or self.optimizer
+            if optimizer is None:
+                raise RuntimeError("optimizer is not set")
+            self.lr_scheduler = CosineAnnealingLR(
+                optimizer,
+                T_max=num_training_steps,
+                eta_min=self.args.min_lr,
+            )
+            if self.args.lr_scheduler_type != "cosine":
+                self.args.lr_scheduler_type = "cosine"
+        return self.lr_scheduler
+
+
+@dataclass
+class NutritionTrainingArguments(TrainingArguments):
+    """TrainingArguments with an explicit minimum LR for cosine decay."""
+
+    min_lr: float = field(default=1e-6, metadata={"help": "Minimum LR for cosine decay"})
+
+    def __post_init__(self):
+        super().__post_init__()
+
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="LoRA fine-tune Qwen3-VL on Nutrition5k (mlx-vlm)"
+        description="HF/PEFT LoRA fine-tune Qwen3-VL for Nutrition5k"
     )
     parser.add_argument(
-        "--train-data", type=str,
-        default="~/src/my-own-plate/data/nutrition5k_hf",
-        help="Path to HuggingFace dataset directory (run convert_dataset.py first)",
+        "--model",
+        type=str,
+        default="Qwen/Qwen3-VL-2B-Instruct",
+        help="Base model HF ID or local directory (default: Qwen/Qwen3-VL-2B-Instruct)",
     )
     parser.add_argument(
-        "--model", type=str, default="mlx-community/Qwen3-VL-2B-Instruct-bf16",
-        help="Model path (must be an mlx-community bf16 model for mlx-vlm)",
+        "--train-data",
+        type=str,
+        default="~/src/my-own-plate/data/nutrition5k_hf_chat",
+        help="HF chat dataset directory (default: data/nutrition5k_hf_chat)",
     )
     parser.add_argument(
-        "--output-dir", type=str, default="./output/adapters/adapters.safetensors",
-        help="Output path for adapter weights",
+        "--output-dir",
+        type=str,
+        default="~/src/my-own-plate/training/output",
+        help="Directory for checkpoints and adapters",
+    )
+    parser.add_argument(
+        "--image-size",
+        type=int,
+        default=384,
+        help="Resize images to this square size (default: 384)",
     )
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--learning-rate", type=float, default=1e-5)
-    parser.add_argument("--lora-rank", type=int, default=64)
-    # NOTE: mlx-vlm uses alpha as a raw multiplier (not alpha/rank like HF PEFT).
-    # With rank=16, set alpha=1.0 for standard LoRA scaling.
-    parser.add_argument("--lora-alpha", type=float, default=1.0)
-    parser.add_argument("--max-seq-length", type=int, default=2048)
-    parser.add_argument("--grad-checkpoint", action="store_true", default=True,
-                        help="Use gradient checkpointing (default: on)")
-    parser.add_argument("--image-resize", type=int, nargs=2, default=[384, 384],
-                        help="Resize images to this shape (default: 384 384)")
-    parser.add_argument("--steps-per-report", type=int, default=10)
-    parser.add_argument("--steps-per-eval", type=int, default=500,
-                        help="Run validation every N steps (default: 500)")
-    parser.add_argument("--val-batches", type=int, default=25,
-                        help="Number of validation batches per eval (default: 25)")
-    parser.add_argument("--val-split", type=str, default="validation",
-                        help="Dataset split to use for validation (default: validation)")
-    parser.add_argument("--steps-per-save", type=int, default=100000,
-                        help="Save checkpoint every N steps (default: 100000 — only final save)")
-    parser.add_argument("--no-compile", action="store_true", default=True,
-                        help="Disable mx.compile (default: on, prevents Metal timeout)")
-    parser.add_argument("--compile", action="store_true",
-                        help="Enable mx.compile (faster but may crash on laptops)")
+    parser.add_argument("--min-lr", type=float, default=1e-6)
+    parser.add_argument("--lora-rank-llm", type=int, default=64)
+    parser.add_argument("--lora-alpha-llm", type=int, default=64)
+    parser.add_argument(
+        "--llm-lora-targets",
+        nargs="+",
+        default=LLM_LORA_TARGETS,
+        help="Target modules for PEFT LLM LoRA (default: all linear projections)",
+    )
+    parser.add_argument("--lora-rank-vision", type=int, default=32)
+    parser.add_argument("--lora-alpha-vision", type=int, default=32)
+    parser.add_argument("--lora-dropout", type=float, default=0.0)
+    parser.add_argument(
+        "--vision-lora",
+        dest="vision_lora",
+        action="store_true",
+        default=True,
+        help="Apply custom LoRA to the vision transformer blocks (default: on)",
+    )
+    parser.add_argument(
+        "--no-vision-lora",
+        dest="vision_lora",
+        action="store_false",
+        help="Disable custom LoRA on vision transformer blocks",
+    )
+    parser.add_argument(
+        "--projector-lora",
+        dest="projector_lora",
+        action="store_true",
+        default=True,
+        help="Apply custom LoRA to the vision-language projector (default: on)",
+    )
+    parser.add_argument(
+        "--no-projector-lora",
+        dest="projector_lora",
+        action="store_false",
+        help="Disable custom LoRA on the vision-language projector",
+    )
+    parser.add_argument(
+        "--grad-checkpoint",
+        dest="grad_checkpoint",
+        action="store_true",
+        default=True,
+        help="Enable gradient checkpointing (default: on)",
+    )
+    parser.add_argument(
+        "--no-grad-checkpoint",
+        dest="grad_checkpoint",
+        action="store_false",
+        help="Disable gradient checkpointing",
+    )
+    parser.add_argument("--system-prompt", type=str, default=None)
+    parser.add_argument("--save-steps", type=int, default=500)
+    parser.add_argument("--eval-steps", type=int, default=500)
+    parser.add_argument("--logging-steps", type=int, default=10)
+    parser.add_argument("--max-samples", type=int, default=None,
+                        help="Limit train/val to N samples for smoke testing")
+    parser.add_argument(
+        "--resume-from-last-checkpoint",
+        action="store_true",
+        default=False,
+        help="Resume from the latest checkpoint in --output-dir if one exists",
+    )
     return parser.parse_args()
 
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
 
 def main():
     args = parse_args()
     args.train_data = os.path.expanduser(args.train_data)
     args.output_dir = os.path.expanduser(args.output_dir)
 
-    os.makedirs(os.path.dirname(args.output_dir), exist_ok=True)
+    Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
-    # Metal safety: disable compile and cap memory
-    if args.no_compile and not args.compile:
-        mx.disable_compile()
-        print("mx.compile disabled (prevents Metal GPU timeout)")
+    last_checkpoint = None
+    if args.resume_from_last_checkpoint:
+        last_checkpoint = get_last_checkpoint(args.output_dir)
+        if last_checkpoint is not None:
+            print(f"\nResuming training from {last_checkpoint}")
 
-    metal_mem_cap = int(mx.device_info()["memory_size"] * 0.5)
-    mx.set_memory_limit(metal_mem_cap)
-    mx.set_wired_limit(metal_mem_cap)
-    print(f"Metal memory capped at {metal_mem_cap / 1e9:.1f} GB")
+    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    print(f"Using device: {device}")
 
     # ------------------------------------------------------------------
-    # Load model
+    # Load processor and model
     # ------------------------------------------------------------------
-    logger.info(f"Loading model: {args.model}")
-    model, processor = load(
-        args.model, processor_config={"trust_remote_code": True}
+    print(f"Loading model and processor from {args.model}")
+    processor = AutoProcessor.from_pretrained(args.model, trust_remote_code=True)
+
+    # Force a single square resolution (384x384)
+    pixels = args.image_size * args.image_size
+    processor.image_processor.min_pixels = pixels
+    processor.image_processor.max_pixels = pixels
+    print(f"Image processor: min_pixels={pixels}, max_pixels={pixels}")
+
+    model = AutoModelForImageTextToText.from_pretrained(
+        args.model,
+        trust_remote_code=True,
+        dtype=torch.float16,
+        device_map=device,
     )
-    model_type = getattr(getattr(model, "config", None), "model_type", None)
-    config = model.config.__dict__
+    model.config.use_cache = False
+
+    # ------------------------------------------------------------------
+    # Apply LoRA
+    # ------------------------------------------------------------------
+    print("\nApplying LoRA adapters")
+    if args.vision_lora:
+        apply_vision_block_lora(
+            model,
+            r=args.lora_rank_vision,
+            alpha=args.lora_alpha_vision,
+            dropout=args.lora_dropout,
+        )
+    if args.projector_lora:
+        apply_projector_lora(
+            model,
+            r=args.lora_rank_llm,
+            alpha=args.lora_alpha_llm,
+            dropout=args.lora_dropout,
+        )
+    lora_config = get_peft_lora_config(
+        r=args.lora_rank_llm,
+        alpha=args.lora_alpha_llm,
+        dropout=args.lora_dropout,
+        target_modules=args.llm_lora_targets,
+    )
+    model = get_peft_model(model, lora_config)
+    print_trainable_parameters(model)
+
+    # ------------------------------------------------------------------
+    # Gradient checkpointing
+    # ------------------------------------------------------------------
+    if args.grad_checkpoint:
+        model.gradient_checkpointing_enable()
+        print("Gradient checkpointing enabled")
 
     # ------------------------------------------------------------------
     # Load datasets
     # ------------------------------------------------------------------
-    logger.info(f"Loading training data: {args.train_data} (split=train)")
-    train_ds = load_dataset(args.train_data, split="train")
+    print(f"\nLoading datasets from {args.train_data}")
+    train_ds = load_dataset("parquet", data_dir=args.train_data, split="train")
+    val_ds = load_dataset("parquet", data_dir=args.train_data, split="validation")
+    if args.max_samples is not None:
+        train_ds = train_ds.select(range(min(args.max_samples, len(train_ds))))
+        val_ds = val_ds.select(range(min(args.max_samples, len(val_ds))))
+    print(f"Train: {len(train_ds)} | Validation: {len(val_ds)}")
 
-    if args.epochs is not None:
-        iters = (len(train_ds) // args.batch_size) * args.epochs
-    else:
-        iters = len(train_ds)
-
-    train_ds = train_ds.select(range(min(iters, len(train_ds))))
-    train_ds = transform_dataset_to_messages(train_ds, model_type)
-    train_dataset = FixedVisionDataset(
-        train_ds, config, processor, image_resize_shape=args.image_resize,
-    )
-
-    # Load validation dataset
-    val_dataset = None
-    try:
-        logger.info(f"Loading validation data: {args.train_data} (split={args.val_split})")
-        val_ds = load_dataset(args.train_data, split=args.val_split)
-        val_ds = transform_dataset_to_messages(val_ds, model_type)
-        val_dataset = FixedVisionDataset(
-            val_ds, config, processor, image_resize_shape=args.image_resize,
-        )
-        logger.info(f"Validation: {len(val_ds)} samples")
-    except (ValueError, KeyError):
-        logger.warning(f"No '{args.val_split}' split found — training without validation")
+    train_dataset = NutritionDataset(train_ds, processor, system_prompt=args.system_prompt)
+    val_dataset = NutritionDataset(val_ds, processor, system_prompt=args.system_prompt)
+    collator = VLDataCollator(pad_token_id=processor.tokenizer.pad_token_id)
 
     # ------------------------------------------------------------------
-    # Setup LoRA — LLM attn+MLP + VL merger (vision-language projector)
+    # Training arguments
     # ------------------------------------------------------------------
-    from mlx_vlm.trainer.utils import (
-        get_peft_model, LoRaLayer, set_module_by_name, freeze_model
+    training_args = NutritionTrainingArguments(
+        output_dir=args.output_dir,
+        num_train_epochs=args.epochs,
+        per_device_train_batch_size=args.batch_size,
+        per_device_eval_batch_size=args.batch_size,
+        learning_rate=args.learning_rate,
+        lr_scheduler_type="cosine",
+        min_lr=args.min_lr,
+        warmup_ratio=0.0,
+        eval_strategy="steps",
+        eval_steps=args.eval_steps,
+        save_strategy="steps",
+        save_steps=args.save_steps,
+        save_total_limit=3,
+        logging_steps=args.logging_steps,
+        logging_dir=os.path.join(args.output_dir, "logs"),
+        load_best_model_at_end=False,
+        bf16=False,
+        fp16=torch.float16 == torch.float16 and device.type == "cuda",
+        dataloader_num_workers=0,
+        remove_unused_columns=False,
+        report_to="none",
+        gradient_accumulation_steps=1,
+        max_grad_norm=1.0,
+        weight_decay=0.0,
     )
-    import mlx.nn as nn
-
-    # 1) LLM layers
-    llm_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
-                    "gate_proj", "up_proj", "down_proj"]
-    model = get_peft_model(
-        model, llm_modules,
-        rank=args.lora_rank, alpha=args.lora_alpha, dropout=0.0, verbose=False,
-    )
-
-    # 2) VL merger + deepstack mergers (vision→language bridge, NOT vision blocks)
-    merger_lora_count = 0
-    for merger_module in [model.vision_tower.merger,
-                          *model.vision_tower.deepstack_merger_list]:
-        for name, module in merger_module.named_modules():
-            if isinstance(module, (nn.Linear, nn.QuantizedLinear)):
-                lora_layer = LoRaLayer(module, args.lora_rank, args.lora_alpha, 0.0)
-                set_module_by_name(merger_module, name, lora_layer)
-                merger_lora_count += 1
-    print(f"Applied LoRA to {merger_lora_count} VL merger layers")
-
-    # 3) Vision tower top-N blocks (lower rank to avoid disrupting pretrained features)
-    vision_lora_rank = 32  # moderate rank for full tower
-    vision_blocks = model.vision_tower.blocks
-    num_vision_blocks = 24  # all vision blocks
-    vision_lora_count = 0
-    for block in vision_blocks[-num_vision_blocks:]:
-        for name, module in block.named_modules():
-            if isinstance(module, (nn.Linear, nn.QuantizedLinear)):
-                lora_layer = LoRaLayer(module, vision_lora_rank, args.lora_alpha, 0.0)
-                set_module_by_name(block, name, lora_layer)
-                vision_lora_count += 1
-    print(f"Applied LoRA (r{vision_lora_rank}) to top {num_vision_blocks} vision blocks ({vision_lora_count} layers)")
-    print_trainable_parameters(model)
 
     # ------------------------------------------------------------------
     # Train
     # ------------------------------------------------------------------
-    lr_schedule = optim.cosine_decay(args.learning_rate, iters, 1e-6)
-    optimizer = optim.Adam(learning_rate=lr_schedule)
-
-    training_args = TrainingArgs(
-        batch_size=args.batch_size,
-        iters=iters,
-        steps_per_report=args.steps_per_report,
-        steps_per_eval=args.steps_per_eval,
-        steps_per_save=args.steps_per_save,
-        val_batches=args.val_batches,
-        max_seq_length=args.max_seq_length,
-        adapter_file=args.output_dir,
-        grad_checkpoint=args.grad_checkpoint,
-        learning_rate=args.learning_rate,
-    )
-
-    logger.info(f"Starting training: {iters} iters, batch_size={args.batch_size}")
-    import time
-    t0 = time.time()
-
-    train(
+    trainer = NutritionTrainer(
         model=model,
-        optimizer=optimizer,
-        train_dataset=train_dataset,
-        val_dataset=val_dataset,
         args=training_args,
-        train_on_completions=True,
+        train_dataset=train_dataset,
+        eval_dataset=val_dataset,
+        data_collator=collator,
+        tokenizer=processor.tokenizer,
     )
 
-    elapsed = time.time() - t0
-    mins = elapsed / 60
-    print(f"\nTraining complete in {mins:.1f} minutes.")
-    print(f"Adapter saved to: {args.output_dir}")
+    print(f"\nStarting training: {args.epochs} epochs, lr={args.learning_rate} -> {args.min_lr}")
+    trainer.train(resume_from_checkpoint=last_checkpoint)
+
+    # ------------------------------------------------------------------
+    # Save adapters
+    # ------------------------------------------------------------------
+    adapter_dir = os.path.join(args.output_dir, "adapter")
+    model.save_pretrained(adapter_dir)
+    print(f"\nPEFT adapter saved to {adapter_dir}")
+
+    custom_lora_path = os.path.join(args.output_dir, "vision_lora.pt")
+    save_custom_lora(model, custom_lora_path)
+
+    print("Training complete.")
 
 
 if __name__ == "__main__":

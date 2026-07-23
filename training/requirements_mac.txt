@@ -1,6 +1,0 @@
-mlx>=0.31.0
-mlx-vlm>=0.4.4
-Pillow
-numpy
-datasets
-torchvision  # required by transformers for Qwen3-VL processor (preprocessing only, not training)

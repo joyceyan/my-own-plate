@@ -1,0 +1,62 @@
+{
+  "timestamp": "2026-05-08T03:24:41.281371+00:00",
+  "model": "mlx-community/Qwen3-VL-2B-Instruct-bf16",
+  "test_data": "/Users/jyan/src/my-own-plate/data/nutrition5k_test.jsonl",
+  "total_samples": 349,
+  "fine_tuned": {
+    "metrics": {
+      "calories": {
+        "mae": 144.644,
+        "mae_pct": 61.0,
+        "std_pct": 48.1,
+        "gt_mean": 237.16
+      },
+      "protein": {
+        "mae": 11.554,
+        "mae_pct": 63.2,
+        "std_pct": 88.9,
+        "gt_mean": 18.28
+      },
+      "fat": {
+        "mae": 9.191,
+        "mae_pct": 78.6,
+        "std_pct": 75.7,
+        "gt_mean": 11.69
+      },
+      "carbs": {
+        "mae": 14.776,
+        "mae_pct": 89.2,
+        "std_pct": 66.1,
+        "gt_mean": 16.56
+      }
+    },
+    "parse_failures": 0
+  },
+  "n5k_rgb_baselines": {
+    "calories": {
+      "mae_absolute": 70.6,
+      "mae_absolute_unit": "kcal",
+      "mae_pct_of_mean": 26.1
+    },
+    "mass": {
+      "mae_absolute": 40.4,
+      "mae_absolute_unit": "g",
+      "mae_pct_of_mean": 18.8
+    },
+    "fat": {
+      "mae_absolute": 5.0,
+      "mae_absolute_unit": "g",
+      "mae_pct_of_mean": 34.2
+    },
+    "carbs": {
+      "mae_absolute": 6.1,
+      "mae_absolute_unit": "g",
+      "mae_pct_of_mean": 31.9
+    },
+    "protein": {
+      "mae_absolute": 5.5,
+      "mae_absolute_unit": "g",
+      "mae_pct_of_mean": 29.5
+    }
+  }
+}
