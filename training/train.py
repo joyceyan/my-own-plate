@@ -260,8 +260,8 @@ def parse_args():
         "--grad-checkpoint",
         dest="grad_checkpoint",
         action="store_true",
-        default=True,
-        help="Enable gradient checkpointing (default: on)",
+        default=False,
+        help="Enable gradient checkpointing (default: off for Exp 1)",
     )
     parser.add_argument(
         "--no-grad-checkpoint",
