@@ -33,19 +33,21 @@ Key observations:
 
 ### Priority investigations
 
-- **MLX-equivalent config in HF**: Replicate the legacy MLX best config (LLM attn+MLP + VL merger + all 24 vision blocks, r64/r32, cosine LR, 10ep) exactly in HF to isolate implementation differences.
-- **Custom LoRA training bug**: Investigate why saved vision LoRA-B weights are near-zero. Possible causes: gradient checkpointing incompatibility, fp16 underflow, or custom LoRALinear not receiving gradients.
+- ~~MLX-equivalent config in HF~~: Done as Exp 0; issue was gradient checkpointing blocking custom vision LoRA training (fixed in Exp 1).
+- ~~Custom LoRA training bug~~: Resolved — disabling gradient checkpointing allowed vision LoRA to train and dropped avg MAE% from 55.9% to 31.5%.
 - **Image resolution / preprocessing**: Train/eval/deploy must use identical image preprocessing. Consider explicit square resize to 384×384 so the deployed GGUF path matches training exactly.
 - **Prompt/chat-template format**: Verify the HF chat template produces the same token sequence as the legacy mlx-vlm pipeline.
+- **Close the gap to MLX 18.1% / N5k 30.4%**: Fat remains the weakest nutrient (50.0% vs 34.2% target). Next experiments: epochs, vision rank, LLM rank, LR schedule, LoRA targets, image size.
 
 ### Hyperparameter axes to explore (once baseline is solid)
 
 - LoRA target modules: attn-only vs attn+MLP vs MLX-equivalent.
-- LoRA rank for LLM (16, 32, 64) and vision tower (16, 32, 64).
+- LoRA rank for LLM (16, 32, 64, 128) and vision tower (16, 32, 64).
 - Number of vision blocks to adapt (top-2, top-4, top-8, top-12, all 24).
-- Learning rate and schedule: constant 1e-5, cosine 1e-5→1e-6, etc.
+- Learning rate and schedule: constant 1e-5, cosine 1e-5→1e-6, different min LR.
 - Epochs: 10 vs 12 vs 15 (watch for overfitting).
-- Gradient checkpointing on/off and its interaction with custom LoRA.
+- Gradient checkpointing is off for now; re-enabling would require fixing custom LoRA + checkpointing interaction.
+- Image resolution: 384, 448, 512.
 - Quantization impact on GGUF: F16 vs Q4_K_M vs Q8_0.
 
 ## Experiment log
@@ -59,3 +61,22 @@ Config: LLM r64 (attn+MLP) + projector r64 + all 24 vision blocks r32, alpha=ran
 Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 
 **Insight**: The HF pipeline trains but performs much worse than the legacy MLX result (18.1%). Two hypotheses are most likely: (1) the custom vision LoRA is not training correctly, and/or (2) the image preprocessing/chat-template path differs from MLX in a way that degrades learning. The next experiments should isolate these.
+
+### Exp 1: Disable gradient checkpointing — KEPT
+
+**Hypothesis**: Gradient checkpointing was preventing gradients from reaching the custom vision LoRA matrices, leaving the vision tower effectively frozen and forcing the LLM/projector LoRA to compensate.
+
+**Change**: Set `--grad-checkpoint` default to `False` in `training/train.py`. All other hyperparameters identical to Exp 0.
+
+**Result**: 19.7/30.3/50.0/26.1 = **31.5% avg**, 0 parse failures.
+
+**Comparison vs Exp 0**:
+- Calories: 35.4% → 19.7% (−15.7pp)
+- Protein: 46.6% → 30.3% (−16.3pp)
+- Fat: 86.5% → 50.0% (−36.5pp)
+- Carbs: 55.0% → 26.1% (−28.9pp)
+- Avg: 55.9% → 31.5% (−24.4pp)
+
+**Insight**: Disabling gradient checkpointing was the critical fix. The custom vision LoRA clearly trained this time, and all nutrients improved dramatically. The result is now near the N5k RGB baseline (30.4%) but still 13.4pp behind the legacy MLX result (18.1%). Fat remains the hardest nutrient. Next experiments should focus on closing the remaining gap: longer training, vision/LLM rank, image resolution, and LoRA target selection.
+
+(End of file - total 61 lines)
