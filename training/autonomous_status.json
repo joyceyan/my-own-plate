@@ -1,10 +1,26 @@
 {
-  "current": null,
+  "current": {
+    "id": 2,
+    "phase": "config_committed",
+    "description": "12 epochs to test convergence",
+    "start_time": "2026-07-24T20:41:37.875107+00:00",
+    "params": {
+      "epochs": 12
+    }
+  },
   "best": {
-    "calories": {"mae_pct": 19.7},
-    "protein": {"mae_pct": 30.3},
-    "fat": {"mae_pct": 50.0},
-    "carbs": {"mae_pct": 26.1}
+    "calories": {
+      "mae_pct": 19.7
+    },
+    "protein": {
+      "mae_pct": 30.3
+    },
+    "fat": {
+      "mae_pct": 50.0
+    },
+    "carbs": {
+      "mae_pct": 26.1
+    }
   },
   "best_exp": 1,
   "history": [
