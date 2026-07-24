@@ -140,14 +140,17 @@ def compute_metrics(ground_truths, predictions, parse_failed_flags):
 # Model loading
 # ---------------------------------------------------------------------------
 
-def load_model(model_path: str, adapter_dir: str, vision_lora_path: str):
+def load_model(model_path: str, adapter_dir: str, vision_lora_path: str,
+               image_size: int = 384, vision_rank: int = 32, vision_alpha: int = 32,
+               projector_rank: int = 64, projector_alpha: int = 64):
     """Load base model, apply custom vision LoRA, load PEFT adapter and vision LoRA weights."""
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
     print(f"Using device: {device}")
 
     processor = AutoProcessor.from_pretrained(model_path, trust_remote_code=True)
-    processor.image_processor.min_pixels = 384 * 384
-    processor.image_processor.max_pixels = 384 * 384
+    pixels = image_size * image_size
+    processor.image_processor.min_pixels = pixels
+    processor.image_processor.max_pixels = pixels
 
     model = AutoModelForImageTextToText.from_pretrained(
         model_path,
@@ -156,8 +159,8 @@ def load_model(model_path: str, adapter_dir: str, vision_lora_path: str):
         device_map=device,
     )
 
-    apply_vision_block_lora(model, r=32, alpha=32, dropout=0.0)
-    apply_projector_lora(model, r=64, alpha=64, dropout=0.0)
+    apply_vision_block_lora(model, r=vision_rank, alpha=vision_alpha, dropout=0.0)
+    apply_projector_lora(model, r=projector_rank, alpha=projector_alpha, dropout=0.0)
 
     model = PeftModel.from_pretrained(model, adapter_dir)
     load_custom_lora(model, vision_lora_path)
@@ -236,6 +239,11 @@ def parse_args():
     parser.add_argument("--vision-lora", type=str, default="~/src/my-own-plate/training/output/vision_lora.pt")
     parser.add_argument("--dataset", type=str, default="~/src/my-own-plate/data/nutrition5k_hf_chat")
     parser.add_argument("--output-dir", type=str, default="~/src/my-own-plate/training/eval_results_hf")
+    parser.add_argument("--image-size", type=int, default=384)
+    parser.add_argument("--lora-rank-vision", type=int, default=32)
+    parser.add_argument("--lora-alpha-vision", type=int, default=32)
+    parser.add_argument("--lora-rank-projector", type=int, default=64)
+    parser.add_argument("--lora-alpha-projector", type=int, default=64)
     parser.add_argument("--max-samples", type=int, default=None)
     return parser.parse_args()
 
@@ -257,7 +265,14 @@ def main():
     print(f"Loaded {len(samples)} samples")
 
     print("\nLoading model...")
-    model, processor = load_model(args.model, args.adapter_dir, args.vision_lora)
+    model, processor = load_model(
+        args.model, args.adapter_dir, args.vision_lora,
+        image_size=args.image_size,
+        vision_rank=args.lora_rank_vision,
+        vision_alpha=args.lora_alpha_vision,
+        projector_rank=args.lora_rank_projector,
+        projector_alpha=args.lora_alpha_projector,
+    )
 
     print("\nRunning inference...")
     predictions = []

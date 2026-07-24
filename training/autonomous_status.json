@@ -1,0 +1,19 @@
+{
+  "current": null,
+  "best": {
+    "calories": {"mae_pct": 19.7},
+    "protein": {"mae_pct": 30.3},
+    "fat": {"mae_pct": 50.0},
+    "carbs": {"mae_pct": 26.1}
+  },
+  "best_exp": 1,
+  "history": [
+    {
+      "id": 1,
+      "description": "disable gradient checkpointing",
+      "status": "kept",
+      "avg_mae_pct": 31.5,
+      "completed_at": "2026-07-23T18:30:47.219556+00:00"
+    }
+  ]
+}

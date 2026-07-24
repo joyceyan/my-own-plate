@@ -1,0 +1,77 @@
+{
+  "experiments": [
+    {
+      "id": 2,
+      "description": "12 epochs to test convergence",
+      "params": {
+        "epochs": 12
+      }
+    },
+    {
+      "id": 3,
+      "description": "vision LoRA rank 64",
+      "params": {
+        "lora_rank_vision": 64,
+        "lora_alpha_vision": 64
+      }
+    },
+    {
+      "id": 4,
+      "description": "image size 448",
+      "params": {
+        "image_size": 448
+      }
+    },
+    {
+      "id": 5,
+      "description": "LLM LoRA rank 32",
+      "params": {
+        "lora_rank_llm": 32,
+        "lora_alpha_llm": 32
+      }
+    },
+    {
+      "id": 6,
+      "description": "dropout 0.05",
+      "params": {
+        "lora_dropout": 0.05
+      }
+    },
+    {
+      "id": 7,
+      "description": "15 epochs to test convergence",
+      "params": {
+        "epochs": 15
+      }
+    },
+    {
+      "id": 8,
+      "description": "vision LoRA rank 16",
+      "params": {
+        "lora_rank_vision": 16,
+        "lora_alpha_vision": 16
+      }
+    },
+    {
+      "id": 9,
+      "description": "image size 512",
+      "params": {
+        "image_size": 512
+      }
+    },
+    {
+      "id": 10,
+      "description": "constant LR 1e-5",
+      "params": {
+        "min_lr": 0.00001
+      }
+    },
+    {
+      "id": 11,
+      "description": "LLM attention-only LoRA targets",
+      "params": {
+        "llm_lora_targets": ["q_proj", "k_proj", "v_proj", "o_proj"]
+      }
+    }
+  ]
+}
