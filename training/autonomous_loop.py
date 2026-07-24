@@ -275,19 +275,24 @@ def run_experiment(exp: dict, status: dict):
     train_log = LOGS_DIR / f"exp{exp_id}_train.log"
     eval_log = LOGS_DIR / f"exp{exp_id}_eval.log"
 
+    # Mark experiment as running in status; this also creates a diff so the
+    # subsequent config commit has changes to stage.
+    status["current"] = {
+        "id": exp_id,
+        "phase": "config_committed",
+        "description": description,
+        "start_time": now_utc(),
+        "params": params,
+    }
+    save_status(status)
+
     # Commit experiment config before training.
     config_message = f"exp {exp_id}: {description}"
     print(f"[{now_utc()}] Committing config: {config_message}")
     git_commit(config_message, [QUEUE_FILE, STATUS_FILE])
 
     # Training
-    status["current"] = {
-        "id": exp_id,
-        "phase": "training",
-        "description": description,
-        "start_time": now_utc(),
-        "params": params,
-    }
+    status["current"]["phase"] = "training"
     save_status(status)
     train_pid = run_training(exp, train_log)
     status["current"]["train_pid"] = train_pid
@@ -342,10 +347,14 @@ def run_experiment(exp: dict, status: dict):
     print(f"[{now_utc()}] {result_message}")
 
     # Update queue and status
-    exp["status"] = status_str
-    exp["avg_mae_pct"] = round(avg, 1)
-    exp["completed_at"] = now_utc()
-    save_queue(load_queue())  # reload to avoid overwriting concurrent edits
+    queue = load_queue()
+    for qexp in queue["experiments"]:
+        if qexp["id"] == exp_id:
+            qexp["status"] = status_str
+            qexp["avg_mae_pct"] = round(avg, 1)
+            qexp["completed_at"] = now_utc()
+            break
+    save_queue(queue)
     save_status(status)
 
     if kept:
