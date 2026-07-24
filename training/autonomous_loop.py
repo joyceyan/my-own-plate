@@ -267,55 +267,110 @@ def is_kept(metrics: dict, best: dict | None, parse_failures: int, baseline_pars
     return True
 
 
-def run_experiment(exp: dict, status: dict):
-    exp_id = exp["id"]
+def find_exp_by_id(queue: dict, exp_id: int):
+    for exp in queue.get("experiments", []):
+        if exp.get("id") == exp_id:
+            return exp
+    return None
+
+
+def find_next_pending(queue: dict):
+    for exp in queue.get("experiments", []):
+        if exp.get("status") not in ("kept", "reverted"):
+            return exp
+    return None
+
+
+def ensure_training_completed(exp: dict, status: dict, train_log: Path) -> int:
+    """Resume or start training. Returns the PID of the completed training run."""
+    current = status.get("current", {})
+    train_pid = current.get("train_pid")
+
+    if train_pid and is_process_running(train_pid):
+        print(f"[{now_utc()}] Resuming training for exp {exp['id']} (PID {train_pid})")
+        if not wait_for_process(train_pid, train_log):
+            raise RuntimeError(f"Training for exp {exp['id']} timed out")
+    else:
+        # Start fresh training
+        status["current"]["phase"] = "training"
+        save_status(status)
+        train_pid = run_training(exp, train_log)
+        status["current"]["train_pid"] = train_pid
+        save_status(status)
+        if not wait_for_process(train_pid, train_log):
+            raise RuntimeError(f"Training for exp {exp['id']} timed out")
+
+    train_output = train_log.read_text() if train_log.exists() else ""
+    if "Training complete" not in train_output:
+        raise RuntimeError(f"Training for exp {exp['id']} did not complete successfully. See {train_log}")
+    return train_pid
+
+
+def ensure_evaluation_completed(exp: dict, status: dict, eval_log: Path) -> int:
+    """Resume or start evaluation. Returns the PID of the completed evaluation run."""
+    current = status.get("current", {})
+    eval_pid = current.get("eval_pid")
+
+    if eval_pid and is_process_running(eval_pid):
+        print(f"[{now_utc()}] Resuming evaluation for exp {exp['id']} (PID {eval_pid})")
+        if not wait_for_process(eval_pid, eval_log):
+            raise RuntimeError(f"Evaluation for exp {exp['id']} timed out")
+    else:
+        status["current"]["phase"] = "evaluating"
+        save_status(status)
+        eval_pid = run_evaluation(exp, eval_log)
+        status["current"]["eval_pid"] = eval_pid
+        save_status(status)
+        if not wait_for_process(eval_pid, eval_log):
+            raise RuntimeError(f"Evaluation for exp {exp['id']} timed out")
+
+    return eval_pid
+
+def run_experiment(exp_id: int, status: dict):
+    """Run or resume an experiment end-to-end (train + eval + record + keep/revert)."""
+    queue = load_queue()
+    exp = find_exp_by_id(queue, exp_id)
+    if exp is None:
+        raise RuntimeError(f"Experiment {exp_id} not found in queue")
+
     description = exp["description"]
     params = exp.get("params", {})
-
     train_log = LOGS_DIR / f"exp{exp_id}_train.log"
     eval_log = LOGS_DIR / f"exp{exp_id}_eval.log"
 
-    # Mark experiment as running in status; this also creates a diff so the
-    # subsequent config commit has changes to stage.
-    status["current"] = {
-        "id": exp_id,
-        "phase": "config_committed",
-        "description": description,
-        "start_time": now_utc(),
-        "params": params,
-    }
-    save_status(status)
+    # Detect whether we're resuming an in-progress experiment.
+    current = status.get("current")
+    resuming = (
+        current is not None
+        and current.get("id") == exp_id
+        and current.get("phase") in ("config_committed", "training", "evaluating")
+    )
 
-    # Commit experiment config before training.
-    config_message = f"exp {exp_id}: {description}"
-    print(f"[{now_utc()}] Committing config: {config_message}")
-    git_commit(config_message, [QUEUE_FILE, STATUS_FILE])
+    if resuming:
+        print(f"[{now_utc()}] Resuming exp {exp_id}: {description}")
+        config_message = f"exp {exp_id}: {description}"
+    else:
+        # Mark experiment as running in status; this also creates a diff so the
+        # subsequent config commit has changes to stage.
+        status["current"] = {
+            "id": exp_id,
+            "phase": "config_committed",
+            "description": description,
+            "start_time": now_utc(),
+            "params": params,
+        }
+        save_status(status)
 
-    # Training
-    status["current"]["phase"] = "training"
-    save_status(status)
-    train_pid = run_training(exp, train_log)
-    status["current"]["train_pid"] = train_pid
-    save_status(status)
+        # Commit experiment config before training.
+        config_message = f"exp {exp_id}: {description}"
+        print(f"[{now_utc()}] Committing config: {config_message}")
+        git_commit(config_message, [QUEUE_FILE, STATUS_FILE])
 
-    if not wait_for_process(train_pid, train_log):
-        raise RuntimeError(f"Training for exp {exp_id} timed out or did not exit")
+    # Ensure training is completed (resume or start fresh).
+    ensure_training_completed(exp, status, train_log)
 
-    # Verify training completed by checking the log.
-    train_output = train_log.read_text() if train_log.exists() else ""
-    if "Training complete" not in train_output:
-        raise RuntimeError(f"Training for exp {exp_id} did not complete successfully. See {train_log}")
-
-    # Evaluation
-    status["current"]["phase"] = "evaluating"
-    status["current"]["eval_start_time"] = now_utc()
-    save_status(status)
-    eval_pid = run_evaluation(exp, eval_log)
-    status["current"]["eval_pid"] = eval_pid
-    save_status(status)
-
-    if not wait_for_process(eval_pid, eval_log):
-        raise RuntimeError(f"Evaluation for exp {exp_id} timed out or did not exit")
+    # Ensure evaluation is completed.
+    ensure_evaluation_completed(exp, status, eval_log)
 
     summary = read_eval_summary("val")
     if summary is None:
@@ -387,20 +442,30 @@ def run_experiment(exp: dict, status: dict):
 def main():
     print(f"[{now_utc()}] Starting autonomous loop")
     status = load_status()
-    queue = load_queue()
 
-    if not queue.get("experiments"):
-        print("No experiments in queue. Exiting.")
-        return
+    # Resume any in-progress experiment.
+    current = status.get("current")
+    if current is not None and current.get("id") is not None:
+        exp_id = current["id"]
+        print(f"[{now_utc()}] Resuming in-progress experiment {exp_id} (phase: {current.get('phase')})")
+        try:
+            run_experiment(exp_id, status)
+        except Exception as e:
+            print(f"[{now_utc()}] ERROR resuming exp {exp_id}: {e}", file=sys.stderr)
+            status["current"] = None
+            save_status(status)
+            raise
 
-    for exp in queue["experiments"]:
-        if exp.get("status") in ("kept", "reverted"):
-            print(f"[{now_utc()}] Skipping already completed exp {exp['id']} ({exp['status']})")
-            continue
+    while True:
+        # Reload queue from disk each iteration so live edits take effect.
+        queue = load_queue()
+        exp = find_next_pending(queue)
+        if exp is None:
+            break
 
         print(f"[{now_utc()}] Running exp {exp['id']}: {exp['description']}")
         try:
-            run_experiment(exp, status)
+            run_experiment(exp["id"], status)
         except Exception as e:
             print(f"[{now_utc()}] ERROR in exp {exp['id']}: {e}", file=sys.stderr)
             status["current"] = None

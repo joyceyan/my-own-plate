@@ -9,31 +9,35 @@
     },
     {
       "id": 3,
-      "description": "vision LoRA rank 64",
+      "description": "vision LoRA rank 64 (3 epoch screen)",
       "params": {
+        "epochs": 3,
         "lora_rank_vision": 64,
         "lora_alpha_vision": 64
       }
     },
     {
       "id": 4,
-      "description": "image size 448",
+      "description": "image size 448 (3 epoch screen)",
       "params": {
+        "epochs": 3,
         "image_size": 448
       }
     },
     {
       "id": 5,
-      "description": "LLM LoRA rank 32",
+      "description": "LLM LoRA rank 32 (3 epoch screen)",
       "params": {
+        "epochs": 3,
         "lora_rank_llm": 32,
         "lora_alpha_llm": 32
       }
     },
     {
       "id": 6,
-      "description": "dropout 0.05",
+      "description": "dropout 0.05 (3 epoch screen)",
       "params": {
+        "epochs": 3,
         "lora_dropout": 0.05
       }
     },
@@ -46,30 +50,34 @@
     },
     {
       "id": 8,
-      "description": "vision LoRA rank 16",
+      "description": "vision LoRA rank 16 (3 epoch screen)",
       "params": {
+        "epochs": 3,
         "lora_rank_vision": 16,
         "lora_alpha_vision": 16
       }
     },
     {
       "id": 9,
-      "description": "image size 512",
+      "description": "image size 512 (3 epoch screen)",
       "params": {
+        "epochs": 3,
         "image_size": 512
       }
     },
     {
       "id": 10,
-      "description": "constant LR 1e-5",
+      "description": "constant LR 1e-5 (3 epoch screen)",
       "params": {
+        "epochs": 3,
         "min_lr": 0.00001
       }
     },
     {
       "id": 11,
-      "description": "LLM attention-only LoRA targets",
+      "description": "LLM attention-only LoRA targets (3 epoch screen)",
       "params": {
+        "epochs": 3,
         "llm_lora_targets": ["q_proj", "k_proj", "v_proj", "o_proj"]
       }
     }
