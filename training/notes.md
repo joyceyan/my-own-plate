@@ -80,3 +80,19 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 **Insight**: Disabling gradient checkpointing was the critical fix. The custom vision LoRA clearly trained this time, and all nutrients improved dramatically. The result is now near the N5k RGB baseline (30.4%) but still 13.4pp behind the legacy MLX result (18.1%). Fat remains the hardest nutrient. Next experiments should focus on closing the remaining gap: longer training, vision/LLM rank, image resolution, and LoRA target selection.
 
 (End of file - total 61 lines)
+
+### Exp 2: 12 epochs to test convergence — KEPT
+
+**Params**: {"epochs": 12}
+
+**Result**: 18.5/28.6/39.1/25.1 = **27.8% avg**, 0 parse failures.
+
+**Comparison vs best-so-far**:
+- calories: 19.7% → 18.5% (-1.2pp)
+- protein: 30.3% → 28.6% (-1.7pp)
+- fat: 50.0% → 39.1% (-10.9pp)
+- carbs: 26.1% → 25.1% (-1.0pp)
+- avg: 31.5% → 27.8% (-3.7pp)
+
+**Insight**: TBD — update manually if needed.
+

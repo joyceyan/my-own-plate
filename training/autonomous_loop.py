@@ -86,10 +86,24 @@ def read_eval_summary(mode: str = "val"):
 
 
 def is_process_running(pid: int):
+    """Return True if `pid` is a running, non-zombie process."""
+    if pid is None:
+        return False
     try:
-        os.kill(pid, 0)
-        return True
-    except (OSError, ProcessLookupError):
+        result = subprocess.run(
+            ["ps", "-p", str(pid), "-o", "stat="],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode != 0:
+            return False
+        status = result.stdout.strip().split()
+        if not status:
+            return False
+        # Zombies start with Z (e.g. Z, ZN, Z+); consider them finished.
+        return not status[0].startswith("Z")
+    except Exception:
         return False
 
 
@@ -281,8 +295,23 @@ def find_next_pending(queue: dict):
     return None
 
 
-def ensure_training_completed(exp: dict, status: dict, train_log: Path) -> int:
-    """Resume or start training. Returns the PID of the completed training run."""
+def training_is_complete(exp_id: int, train_log: Path) -> bool:
+    if not train_log.exists():
+        return False
+    try:
+        return "Training complete" in train_log.read_text()
+    except Exception:
+        return False
+
+
+def ensure_training_completed(exp: dict, status: dict, train_log: Path):
+    """Resume or start training. Raises on timeout or failure."""
+    if training_is_complete(exp["id"], train_log):
+        print(f"[{now_utc()}] Training already complete for exp {exp['id']}")
+        status["current"]["phase"] = "training"
+        save_status(status)
+        return
+
     current = status.get("current", {})
     train_pid = current.get("train_pid")
 
@@ -300,14 +329,19 @@ def ensure_training_completed(exp: dict, status: dict, train_log: Path) -> int:
         if not wait_for_process(train_pid, train_log):
             raise RuntimeError(f"Training for exp {exp['id']} timed out")
 
-    train_output = train_log.read_text() if train_log.exists() else ""
-    if "Training complete" not in train_output:
+    if not training_is_complete(exp["id"], train_log):
         raise RuntimeError(f"Training for exp {exp['id']} did not complete successfully. See {train_log}")
-    return train_pid
 
 
-def ensure_evaluation_completed(exp: dict, status: dict, eval_log: Path) -> int:
-    """Resume or start evaluation. Returns the PID of the completed evaluation run."""
+def ensure_evaluation_completed(exp: dict, status: dict, eval_log: Path):
+    """Resume or start evaluation. Raises on timeout or failure."""
+    summary = read_eval_summary("val")
+    if summary is not None:
+        print(f"[{now_utc()}] Evaluation already complete for exp {exp['id']}")
+        status["current"]["phase"] = "evaluating"
+        save_status(status)
+        return
+
     current = status.get("current", {})
     eval_pid = current.get("eval_pid")
 
@@ -324,7 +358,8 @@ def ensure_evaluation_completed(exp: dict, status: dict, eval_log: Path) -> int:
         if not wait_for_process(eval_pid, eval_log):
             raise RuntimeError(f"Evaluation for exp {exp['id']} timed out")
 
-    return eval_pid
+    if read_eval_summary("val") is None:
+        raise RuntimeError(f"Evaluation summary not found for exp {exp['id']}")
 
 def run_experiment(exp_id: int, status: dict):
     """Run or resume an experiment end-to-end (train + eval + record + keep/revert)."""

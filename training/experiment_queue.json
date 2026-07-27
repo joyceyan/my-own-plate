@@ -5,7 +5,10 @@
       "description": "12 epochs to test convergence",
       "params": {
         "epochs": 12
-      }
+      },
+      "status": "kept",
+      "avg_mae_pct": 27.8,
+      "completed_at": "2026-07-27T18:33:53.951665+00:00"
     },
     {
       "id": 3,
@@ -70,7 +73,7 @@
       "description": "constant LR 1e-5 (3 epoch screen)",
       "params": {
         "epochs": 3,
-        "min_lr": 0.00001
+        "min_lr": 1e-05
       }
     },
     {
@@ -78,7 +81,12 @@
       "description": "LLM attention-only LoRA targets (3 epoch screen)",
       "params": {
         "epochs": 3,
-        "llm_lora_targets": ["q_proj", "k_proj", "v_proj", "o_proj"]
+        "llm_lora_targets": [
+          "q_proj",
+          "k_proj",
+          "v_proj",
+          "o_proj"
+        ]
       }
     }
   ]

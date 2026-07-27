@@ -1,3 +1,4 @@
 experiment	cal_mae_pct	protein_mae_pct	fat_mae_pct	carbs_mae_pct	avg_mae_pct	parse_failures	status	description
 0	35.4	46.6	86.5	55.0	55.9	1	baseline	LLM r64 (attn+MLP) + projector r64 + all 24 vision blocks r32, alpha=rank, dropout 0.0, lr 1e-5->1e-6 cosine, 10ep, custom LoRA
 1	19.7	30.3	50.0	26.1	31.5	0	kept	Exp 0 config but with gradient checkpointing disabled
+2	18.5	28.6	39.1	25.1	27.8	0	kept	12 epochs to test convergence

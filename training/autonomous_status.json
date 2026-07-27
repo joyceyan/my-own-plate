@@ -1,12 +1,14 @@
 {
   "current": {
     "id": 2,
-    "phase": "config_committed",
+    "phase": "evaluating",
     "description": "12 epochs to test convergence",
     "start_time": "2026-07-24T20:41:37.875107+00:00",
     "params": {
       "epochs": 12
-    }
+    },
+    "train_pid": 64677,
+    "eval_pid": 21466
   },
   "best": {
     "calories": {
