@@ -96,3 +96,15 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 
 **Insight**: TBD — update manually if needed.
 
+
+
+
+
+### Exp 3: vision LoRA rank 64 (3 epoch screen) — KEPT
+
+**Params**: {"epochs": 3, "lora_rank_vision": 64, "lora_alpha_vision": 64}
+
+**Result**: 23.8/32.4/45.0/33.1 = **33.6% avg**, 0 parse failures.
+
+**Insight**: TBD — update manually if needed.
+

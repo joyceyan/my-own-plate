@@ -17,7 +17,10 @@
         "epochs": 3,
         "lora_rank_vision": 64,
         "lora_alpha_vision": 64
-      }
+      },
+      "status": "kept",
+      "avg_mae_pct": 33.6,
+      "completed_at": "2026-07-28T17:10:13.834471+00:00"
     },
     {
       "id": 4,
