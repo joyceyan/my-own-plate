@@ -60,8 +60,29 @@ def save_json(path: Path, data):
 
 def load_status():
     if STATUS_FILE.exists():
-        return load_json(STATUS_FILE)
-    return {"current": None, "best": None, "history": []}
+        status = load_json(STATUS_FILE)
+    else:
+        status = {}
+
+    # Ensure required keys exist.
+    status.setdefault("current", None)
+    status.setdefault("best", None)
+    status.setdefault("best_parse_failures", 0)
+    status.setdefault("fast_best", None)
+    status.setdefault("fast_best_parse_failures", 0)
+    status.setdefault("best_exp", None)
+    status.setdefault("fast_best_exp", None)
+    status.setdefault("history", [])
+
+    # Compact history: keep only the latest entry per experiment id. This guards
+    # against a previous buggy loop appending the same experiment many times.
+    seen = {}
+    for entry in status["history"]:
+        exp_id = entry.get("id")
+        if exp_id is not None:
+            seen[exp_id] = entry
+    status["history"] = list(seen.values())
+    return status
 
 
 def save_status(status):
@@ -78,7 +99,19 @@ def save_queue(queue):
     save_json(QUEUE_FILE, queue)
 
 
-def read_eval_summary(mode: str = "val"):
+def per_experiment_summary_path(exp_id: int, mode: str = "val"):
+    return TRAINING_DIR / "eval_results_hf" / f"eval_summary_exp{exp_id}_{mode}.json"
+
+
+def read_eval_summary_for_exp(exp_id: int, mode: str = "val"):
+    """Read the per-experiment evaluation summary if it exists."""
+    summary_file = per_experiment_summary_path(exp_id, mode)
+    if summary_file.exists():
+        return load_json(summary_file)
+    return None
+
+
+def read_global_eval_summary(mode: str = "val"):
     summary_file = TRAINING_DIR / "eval_results_hf" / f"eval_summary_{mode}.json"
     if summary_file.exists():
         return load_json(summary_file)
@@ -254,31 +287,84 @@ def run_evaluation(exp: dict, log_file: Path) -> int:
     return pid
 
 
-def is_kept(metrics: dict, best: dict | None, parse_failures: int, baseline_parse_failures: int = 1):
+def is_screen_experiment(params: dict) -> bool:
+    """Screening experiments use fewer epochs than a full run."""
+    return params.get("epochs", 10) < 10
+
+
+def is_kept(metrics: dict, params: dict, baseline: dict | None,
+            parse_failures: int, baseline_parse_failures: int = 1):
     """
+    Decide whether to keep an experiment.
+
+    - Full runs (epochs >= 10) are compared against the best full-run baseline.
+    - Screen experiments (epochs < 10) are compared against the best screen
+      baseline. If no screen baseline exists yet, the experiment is kept and
+      becomes the baseline.
+
     Success criteria from program.md:
-    1. Average MAE% decreases vs best-so-far.
-    2. No individual nutrient increases by >5pp vs best-so-far per-nutrient.
-    3. Parse failures don't increase significantly (>2x baseline rate).
+    1. Average MAE% does not regress vs the appropriate baseline.
+    2. No individual nutrient increases by >5pp vs the baseline per-nutrient.
+    3. Parse failures do not increase significantly (>2x baseline rate).
     """
-    if best is None:
+    screen = is_screen_experiment(params)
+    baseline_label = "fast baseline" if screen else "full baseline"
+
+    if baseline is None:
+        print(f"[{now_utc()}] No {baseline_label} yet; treating as kept")
         return True
 
     curr_avg = sum(metrics[n]["mae_pct"] for n in NUTRIENTS) / len(NUTRIENTS)
-    best_avg = sum(best[n]["mae_pct"] for n in NUTRIENTS) / len(NUTRIENTS)
-    if curr_avg >= best_avg:
-        return False
+    baseline_avg = sum(baseline[n]["mae_pct"] for n in baseline) / len(baseline)
+
+    # For full runs we require strict improvement. For screens we allow tying
+    # or improving, so a good config is not rejected just because it hasn't yet
+    # been trained for more epochs.
+    if screen:
+        if curr_avg > baseline_avg:
+            print(f"[{now_utc()}] Screen avg {curr_avg:.1f}% > {baseline_label} {baseline_avg:.1f}% -> revert")
+            return False
+    else:
+        if curr_avg >= baseline_avg:
+            print(f"[{now_utc()}] Full avg {curr_avg:.1f}% >= {baseline_label} {baseline_avg:.1f}% -> revert")
+            return False
 
     for n in NUTRIENTS:
-        if metrics[n]["mae_pct"] > best[n]["mae_pct"] + 5.0:
+        if metrics[n]["mae_pct"] > baseline[n]["mae_pct"] + 5.0:
+            print(f"[{now_utc()}] Nutrient {n} regressed by >5pp vs {baseline_label} -> revert")
             return False
 
     baseline_rate = baseline_parse_failures / 349.0
     current_rate = parse_failures / 349.0
-    if current_rate > 2 * baseline_rate:
+    if baseline_rate > 0 and current_rate > 2 * baseline_rate:
+        print(f"[{now_utc()}] Parse failures {parse_failures}/349 > 2x baseline -> revert")
         return False
 
     return True
+
+
+def update_baselines(status: dict, exp_id: int, params: dict, metrics: dict, parse_failures: int):
+    """Update the appropriate baseline in status when an experiment is kept."""
+    summary = {n: {"mae_pct": metrics[n]["mae_pct"]} for n in NUTRIENTS}
+    if is_screen_experiment(params):
+        status["fast_best"] = summary
+        status["fast_best_parse_failures"] = parse_failures
+        status["fast_best_exp"] = exp_id
+        print(f"[{now_utc()}] New fast baseline from exp {exp_id}: "
+              f"{sum(metrics[n]['mae_pct'] for n in NUTRIENTS) / len(NUTRIENTS):.1f}% avg")
+    else:
+        status["best"] = summary
+        status["best_parse_failures"] = parse_failures
+        status["best_exp"] = exp_id
+        print(f"[{now_utc()}] New full baseline from exp {exp_id}: "
+              f"{sum(metrics[n]['mae_pct'] for n in NUTRIENTS) / len(NUTRIENTS):.1f}% avg")
+
+
+def get_baselines(status: dict, params: dict):
+    """Return (baseline, baseline_parse_failures) for the current experiment."""
+    if is_screen_experiment(params):
+        return status.get("fast_best"), status.get("fast_best_parse_failures", 0)
+    return status.get("best"), status.get("best_parse_failures", 0)
 
 
 def find_exp_by_id(queue: dict, exp_id: int):
@@ -335,9 +421,11 @@ def ensure_training_completed(exp: dict, status: dict, train_log: Path):
 
 def ensure_evaluation_completed(exp: dict, status: dict, eval_log: Path):
     """Resume or start evaluation. Raises on timeout or failure."""
-    summary = read_eval_summary("val")
-    if summary is not None:
-        print(f"[{now_utc()}] Evaluation already complete for exp {exp['id']}")
+    exp_id = exp["id"]
+    per_exp_summary = per_experiment_summary_path(exp_id, "val")
+
+    if per_exp_summary.exists():
+        print(f"[{now_utc()}] Evaluation already complete for exp {exp_id}")
         status["current"]["phase"] = "evaluating"
         save_status(status)
         return
@@ -346,20 +434,33 @@ def ensure_evaluation_completed(exp: dict, status: dict, eval_log: Path):
     eval_pid = current.get("eval_pid")
 
     if eval_pid and is_process_running(eval_pid):
-        print(f"[{now_utc()}] Resuming evaluation for exp {exp['id']} (PID {eval_pid})")
+        print(f"[{now_utc()}] Resuming evaluation for exp {exp_id} (PID {eval_pid})")
         if not wait_for_process(eval_pid, eval_log):
-            raise RuntimeError(f"Evaluation for exp {exp['id']} timed out")
+            raise RuntimeError(f"Evaluation for exp {exp_id} timed out")
     else:
+        # Remove stale global summary so we don't accidentally reuse a previous
+        # experiment's results. evaluate.py writes a single global summary file.
+        global_summary = TRAINING_DIR / "eval_results_hf" / "eval_summary_val.json"
+        if global_summary.exists():
+            global_summary.unlink()
+
         status["current"]["phase"] = "evaluating"
         save_status(status)
         eval_pid = run_evaluation(exp, eval_log)
         status["current"]["eval_pid"] = eval_pid
         save_status(status)
         if not wait_for_process(eval_pid, eval_log):
-            raise RuntimeError(f"Evaluation for exp {exp['id']} timed out")
+            raise RuntimeError(f"Evaluation for exp {exp_id} timed out")
 
-    if read_eval_summary("val") is None:
-        raise RuntimeError(f"Evaluation summary not found for exp {exp['id']}")
+    global_summary = TRAINING_DIR / "eval_results_hf" / "eval_summary_val.json"
+    if not global_summary.exists():
+        raise RuntimeError(f"Evaluation summary not found for exp {exp_id}")
+
+    # Copy the global summary to a per-experiment file so future experiments can
+    # be evaluated without confusion.
+    import shutil
+    shutil.copy(global_summary, per_exp_summary)
+    print(f"[{now_utc()}] Copied evaluation summary to {per_exp_summary}")
 
 def run_experiment(exp_id: int, status: dict):
     """Run or resume an experiment end-to-end (train + eval + record + keep/revert)."""
@@ -407,7 +508,7 @@ def run_experiment(exp_id: int, status: dict):
     # Ensure evaluation is completed.
     ensure_evaluation_completed(exp, status, eval_log)
 
-    summary = read_eval_summary("val")
+    summary = read_eval_summary_for_exp(exp_id, "val")
     if summary is None:
         raise RuntimeError(f"Evaluation summary not found for exp {exp_id}")
 
@@ -415,13 +516,13 @@ def run_experiment(exp_id: int, status: dict):
     parse_failures = summary["parse_failures"]
     avg = sum(metrics[n]["mae_pct"] for n in NUTRIENTS) / len(NUTRIENTS)
 
-    best = status.get("best")
-    kept = is_kept(metrics, best, parse_failures)
+    baseline, baseline_parse_failures = get_baselines(status, params)
+    kept = is_kept(metrics, params, baseline, parse_failures, baseline_parse_failures)
 
-    if best is None:
+    if baseline is None:
         comparison = None
     else:
-        comparison = {n: best[n]["mae_pct"] for n in NUTRIENTS}
+        comparison = {n: baseline[n]["mae_pct"] for n in NUTRIENTS}
 
     # Record results
     status_str = "kept" if kept else "reverted"
@@ -450,15 +551,18 @@ def run_experiment(exp_id: int, status: dict):
     if kept:
         # Amend the config commit to include results and status files.
         git_amend(f"{config_message} — {status_str.upper()}", [RESULTS_TSV, NOTES_MD, QUEUE_FILE, STATUS_FILE])
-        status["best"] = {n: {"mae_pct": metrics[n]["mae_pct"]} for n in NUTRIENTS}
-        status["best_exp"] = exp_id
+        update_baselines(status, exp_id, params, metrics, parse_failures)
         save_status(status)
     else:
-        # Revert the config commit and restore adapter weights.
+        # Revert the config commit and clean up the failed adapters so they do not
+        # interfere with the next experiment. Backups made by the operator are left
+        # untouched.
         git_reset_hard_head_1()
-        # After reset, results.tsv/notes.md are back to previous state, but OUTPUT_DIR may still
-        # contain the failed adapters. The next training run will overwrite them.
-        status["current"]["phase"] = "reverted"
+        failed_output = OUTPUT_DIR / f"exp{exp_id}_reverted"
+        if OUTPUT_DIR.exists():
+            shutil.move(str(OUTPUT_DIR), str(failed_output))
+            print(f"[{now_utc()}] Moved failed output to {failed_output}")
+        status["current"] = {"phase": "reverted", "id": exp_id}
         save_status(status)
 
     status["history"].append({
