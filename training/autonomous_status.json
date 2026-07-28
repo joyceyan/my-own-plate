@@ -1,13 +1,12 @@
 {
   "current": {
-    "id": 3,
-    "phase": "evaluating",
-    "description": "vision LoRA rank 64 (3 epoch screen)",
-    "start_time": "2026-07-28T17:10:13.743996+00:00",
+    "id": 4,
+    "phase": "config_committed",
+    "description": "image size 448 (3 epoch screen)",
+    "start_time": "2026-07-28T17:10:13.946208+00:00",
     "params": {
       "epochs": 3,
-      "lora_rank_vision": 64,
-      "lora_alpha_vision": 64
+      "image_size": 448
     }
   },
   "best": {
@@ -26,9 +25,22 @@
   },
   "best_parse_failures": 0,
   "best_exp": 2,
-  "fast_best": null,
+  "fast_best": {
+    "calories": {
+      "mae_pct": 23.8
+    },
+    "protein": {
+      "mae_pct": 32.4
+    },
+    "fat": {
+      "mae_pct": 45.0
+    },
+    "carbs": {
+      "mae_pct": 33.1
+    }
+  },
   "fast_best_parse_failures": 0,
-  "fast_best_exp": null,
+  "fast_best_exp": 3,
   "history": [
     {
       "id": 0,
@@ -50,6 +62,13 @@
       "status": "kept",
       "avg_mae_pct": 27.8,
       "completed_at": "2026-07-26T05:40:00+00:00"
+    },
+    {
+      "id": 3,
+      "description": "vision LoRA rank 64 (3 epoch screen)",
+      "status": "kept",
+      "avg_mae_pct": 33.6,
+      "completed_at": "2026-07-28T17:10:13.945887+00:00"
     }
   ]
 }
