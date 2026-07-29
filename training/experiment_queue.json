@@ -28,7 +28,11 @@
       "params": {
         "epochs": 3,
         "image_size": 448
-      }
+      },
+      "status": "reverted",
+      "avg_mae_pct": 0.0,
+      "completed_at": "2026-07-28T17:18:18+00:00",
+      "note": "aborted after 7h: severe memory pressure / image size 448 too slow"
     },
     {
       "id": 5,
@@ -61,14 +65,6 @@
         "epochs": 3,
         "lora_rank_vision": 16,
         "lora_alpha_vision": 16
-      }
-    },
-    {
-      "id": 9,
-      "description": "image size 512 (3 epoch screen)",
-      "params": {
-        "epochs": 3,
-        "image_size": 512
       }
     },
     {

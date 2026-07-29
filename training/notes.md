@@ -79,7 +79,6 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 
 **Insight**: Disabling gradient checkpointing was the critical fix. The custom vision LoRA clearly trained this time, and all nutrients improved dramatically. The result is now near the N5k RGB baseline (30.4%) but still 13.4pp behind the legacy MLX result (18.1%). Fat remains the hardest nutrient. Next experiments should focus on closing the remaining gap: longer training, vision/LLM rank, image resolution, and LoRA target selection.
 
-(End of file - total 61 lines)
 
 ### Exp 2: 12 epochs to test convergence — KEPT
 
@@ -97,14 +96,19 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 **Insight**: TBD — update manually if needed.
 
 
-
-
-
 ### Exp 3: vision LoRA rank 64 (3 epoch screen) — KEPT
 
 **Params**: {"epochs": 3, "lora_rank_vision": 64, "lora_alpha_vision": 64}
 
 **Result**: 23.8/32.4/45.0/33.1 = **33.6% avg**, 0 parse failures.
 
-**Insight**: TBD — update manually if needed.
+**Insight**: Provisional 3-epoch fast baseline established by the loop. The initial automated evaluation was skipped due to a stale-summary bug in `autonomous_loop.py`, which was fixed; this result comes from a manual re-evaluation of the trained Exp 3 weights. Future 3-epoch screens will be compared against this baseline.
+
+### Exp 4: image size 448 (3 epoch screen) — REVERTED
+
+**Params**: {"epochs": 3, "image_size": 448}
+
+**Result**: Aborted after ~7 hours (~40% through epoch 1.1). Training became orders of magnitude slower than the 384 default due to memory pressure / much larger vision-token sequences. System load was >16 and the process was frequently in uninterruptible sleep.
+
+**Insight**: 448×448 image preprocessing is too expensive on this machine for the current pipeline. Larger resolution screens are deferred until memory headroom is available or the preprocessing is made more efficient.
 
