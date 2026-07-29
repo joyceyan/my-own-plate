@@ -41,7 +41,11 @@
         "epochs": 3,
         "lora_rank_llm": 32,
         "lora_alpha_llm": 32
-      }
+      },
+      "status": "reverted",
+      "avg_mae_pct": 39.0,
+      "completed_at": "2026-07-29T05:12:48+00:00",
+      "note": "worse than fast baseline (39.0% vs 33.6% avg)"
     },
     {
       "id": 6,
@@ -49,13 +53,6 @@
       "params": {
         "epochs": 3,
         "lora_dropout": 0.05
-      }
-    },
-    {
-      "id": 7,
-      "description": "15 epochs to test convergence",
-      "params": {
-        "epochs": 15
       }
     },
     {

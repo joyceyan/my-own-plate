@@ -555,11 +555,13 @@ def run_experiment(exp_id: int, status: dict):
         save_status(status)
     else:
         # Revert the config commit and clean up the failed adapters so they do not
-        # interfere with the next experiment. Backups made by the operator are left
-        # untouched.
+        # interfere with the next experiment. Move them outside the output directory
+        # so we don't try to move a directory into itself.
         git_reset_hard_head_1()
-        failed_output = OUTPUT_DIR / f"exp{exp_id}_reverted"
+        failed_output = TRAINING_DIR / f"output_exp{exp_id}_reverted"
         if OUTPUT_DIR.exists():
+            if failed_output.exists():
+                shutil.rmtree(failed_output)
             shutil.move(str(OUTPUT_DIR), str(failed_output))
             print(f"[{now_utc()}] Moved failed output to {failed_output}")
         status["current"] = {"phase": "reverted", "id": exp_id}

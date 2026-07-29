@@ -112,3 +112,18 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 
 **Insight**: 448×448 image preprocessing is too expensive on this machine for the current pipeline. Larger resolution screens are deferred until memory headroom is available or the preprocessing is made more efficient.
 
+### Exp 5: LLM LoRA rank 32 (3 epoch screen) — REVERTED
+
+**Params**: {"epochs": 3, "lora_rank_llm": 32, "lora_alpha_llm": 32}
+
+**Result**: 25.8/41.3/53.0/36.1 = **39.0% avg**, 0 parse failures.
+
+**Comparison vs fast baseline (Exp 3)**:
+- calories: 23.8% → 25.8% (+2.0pp)
+- protein: 32.4% → 41.3% (+8.9pp)
+- fat: 45.0% → 53.0% (+8.0pp)
+- carbs: 33.1% → 36.1% (+3.0pp)
+- avg: 33.6% → 39.0% (+5.4pp)
+
+**Insight**: Lowering LLM LoRA rank from 64 to 32 hurt every nutrient, especially protein and fat. The default rank 64 appears important for this task.
+

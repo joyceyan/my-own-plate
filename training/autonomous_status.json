@@ -68,6 +68,14 @@
       "avg_mae_pct": 0.0,
       "completed_at": "2026-07-28T17:18:18+00:00",
       "note": "aborted after 7h: severe memory pressure / image size 448 too slow"
+    },
+    {
+      "id": 5,
+      "description": "LLM LoRA rank 32 (3 epoch screen)",
+      "status": "reverted",
+      "avg_mae_pct": 39.0,
+      "completed_at": "2026-07-29T05:12:48+00:00",
+      "note": "worse than fast baseline (39.0% vs 33.6% avg); loop cleanup bug fixed"
     }
   ]
 }

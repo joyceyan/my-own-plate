@@ -3,3 +3,4 @@ experiment	cal_mae_pct	protein_mae_pct	fat_mae_pct	carbs_mae_pct	avg_mae_pct	par
 1	19.7	30.3	50.0	26.1	31.5	0	kept	Exp 0 config but with gradient checkpointing disabled
 2	18.5	28.6	39.1	25.1	27.8	0	kept	12 epochs to test convergence
 3	23.8	32.4	45.0	33.1	33.6	0	kept	vision LoRA rank 64 (3 epoch screen)
+5	25.8	41.3	53.0	36.1	39.0	0	reverted	LLM LoRA rank 32 (3 epoch screen)
