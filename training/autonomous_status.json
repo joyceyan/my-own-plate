@@ -1,15 +1,18 @@
 {
   "current": {
-    "id": 10,
-    "phase": "evaluating",
-    "description": "constant LR 1e-5 (3 epoch screen)",
-    "start_time": "2026-07-31T09:08:29.444151+00:00",
+    "id": 11,
+    "phase": "config_committed",
+    "description": "LLM attention-only LoRA targets (3 epoch screen)",
+    "start_time": "2026-07-31T13:03:40.015646+00:00",
     "params": {
       "epochs": 3,
-      "min_lr": 1e-05
-    },
-    "train_pid": 58249,
-    "eval_pid": 54086
+      "llm_lora_targets": [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj"
+      ]
+    }
   },
   "best": {
     "calories": {
@@ -101,6 +104,13 @@
       "status": "reverted",
       "avg_mae_pct": 35.1,
       "completed_at": "2026-07-31T09:08:29.443784+00:00"
+    },
+    {
+      "id": 10,
+      "description": "constant LR 1e-5 (3 epoch screen)",
+      "status": "reverted",
+      "avg_mae_pct": 35.2,
+      "completed_at": "2026-07-31T13:03:40.015286+00:00"
     }
   ]
 }
