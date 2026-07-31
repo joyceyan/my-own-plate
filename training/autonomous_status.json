@@ -1,13 +1,15 @@
 {
   "current": {
     "id": 10,
-    "phase": "config_committed",
+    "phase": "evaluating",
     "description": "constant LR 1e-5 (3 epoch screen)",
     "start_time": "2026-07-31T09:08:29.444151+00:00",
     "params": {
       "epochs": 3,
       "min_lr": 1e-05
-    }
+    },
+    "train_pid": 58249,
+    "eval_pid": 54086
   },
   "best": {
     "calories": {

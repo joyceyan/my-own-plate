@@ -161,3 +161,19 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 
 **Insight**: TBD — update manually if needed.
 
+
+### Exp 10: constant LR 1e-5 (3 epoch screen) — REVERTED
+
+**Params**: {"epochs": 3, "min_lr": 1e-05}
+
+**Result**: 25.4/32.5/46.2/36.8 = **35.2% avg**, 0 parse failures.
+
+**Comparison vs best-so-far**:
+- calories: 23.8% → 25.4% (+1.6pp)
+- protein: 32.4% → 32.5% (+0.1pp)
+- fat: 45.0% → 46.2% (+1.2pp)
+- carbs: 33.1% → 36.8% (+3.7pp)
+- avg: 33.6% → 35.2% (+1.6pp)
+
+**Insight**: TBD — update manually if needed.
+

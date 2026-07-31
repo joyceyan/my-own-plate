@@ -76,7 +76,10 @@
       "params": {
         "epochs": 3,
         "min_lr": 1e-05
-      }
+      },
+      "status": "reverted",
+      "avg_mae_pct": 35.2,
+      "completed_at": "2026-07-31T13:03:39.889984+00:00"
     },
     {
       "id": 11,
