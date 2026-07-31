@@ -1,14 +1,16 @@
 {
   "current": {
     "id": 8,
-    "phase": "config_committed",
+    "phase": "evaluating",
     "description": "vision LoRA rank 16 (3 epoch screen)",
     "start_time": "2026-07-31T05:13:18.892603+00:00",
     "params": {
       "epochs": 3,
       "lora_rank_vision": 16,
       "lora_alpha_vision": 16
-    }
+    },
+    "train_pid": 57330,
+    "eval_pid": 47438
   },
   "best": {
     "calories": {

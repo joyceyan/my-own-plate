@@ -145,3 +145,19 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 
 **Loop fix**: Removed `git reset --hard HEAD~1` from the revert path. That reset was rolling back `autonomous_status.json`/`experiment_queue.json`, causing reverted experiments to be re-queued and run repeatedly. Reverts now commit the reverted state directly so the loop advances to the next experiment.
 
+
+### Exp 8: vision LoRA rank 16 (3 epoch screen) — REVERTED
+
+**Params**: {"epochs": 3, "lora_rank_vision": 16, "lora_alpha_vision": 16}
+
+**Result**: 24.7/34.7/47.2/33.9 = **35.1% avg**, 0 parse failures.
+
+**Comparison vs best-so-far**:
+- calories: 23.8% → 24.7% (+0.9pp)
+- protein: 32.4% → 34.7% (+2.3pp)
+- fat: 45.0% → 47.2% (+2.2pp)
+- carbs: 33.1% → 33.9% (+0.8pp)
+- avg: 33.6% → 35.1% (+1.5pp)
+
+**Insight**: TBD — update manually if needed.
+
