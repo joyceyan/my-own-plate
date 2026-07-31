@@ -53,7 +53,10 @@
       "params": {
         "epochs": 3,
         "lora_dropout": 0.05
-      }
+      },
+      "status": "reverted",
+      "avg_mae_pct": 37.6,
+      "completed_at": "2026-07-29T23:30:11.814213+00:00"
     },
     {
       "id": 8,

@@ -554,16 +554,19 @@ def run_experiment(exp_id: int, status: dict):
         update_baselines(status, exp_id, params, metrics, parse_failures)
         save_status(status)
     else:
-        # Revert the config commit and clean up the failed adapters so they do not
-        # interfere with the next experiment. Move them outside the output directory
-        # so we don't try to move a directory into itself.
-        git_reset_hard_head_1()
+        # Clean up the failed adapters so they do not interfere with the next
+        # experiment. Move them outside the output directory so we don't try to
+        # move a directory into itself.
         failed_output = TRAINING_DIR / f"output_exp{exp_id}_reverted"
         if OUTPUT_DIR.exists():
             if failed_output.exists():
                 shutil.rmtree(failed_output)
             shutil.move(str(OUTPUT_DIR), str(failed_output))
             print(f"[{now_utc()}] Moved failed output to {failed_output}")
+        # Commit the reverted result. We do NOT `git reset` here: the queue and
+        # status files must retain the "reverted" marker so the loop does not
+        # re-run this experiment.
+        git_commit(f"{config_message} — {status_str.upper()}", [RESULTS_TSV, NOTES_MD, QUEUE_FILE, STATUS_FILE])
         status["current"] = {"phase": "reverted", "id": exp_id}
         save_status(status)
 
