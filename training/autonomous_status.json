@@ -1,16 +1,13 @@
 {
   "current": {
-    "id": 8,
-    "phase": "evaluating",
-    "description": "vision LoRA rank 16 (3 epoch screen)",
-    "start_time": "2026-07-31T05:13:18.892603+00:00",
+    "id": 10,
+    "phase": "config_committed",
+    "description": "constant LR 1e-5 (3 epoch screen)",
+    "start_time": "2026-07-31T09:08:29.444151+00:00",
     "params": {
       "epochs": 3,
-      "lora_rank_vision": 16,
-      "lora_alpha_vision": 16
-    },
-    "train_pid": 57330,
-    "eval_pid": 47438
+      "min_lr": 1e-05
+    }
   },
   "best": {
     "calories": {
@@ -95,6 +92,13 @@
       "status": "reverted",
       "avg_mae_pct": 37.6,
       "completed_at": "2026-07-29T23:30:11.416632+00:00"
+    },
+    {
+      "id": 8,
+      "description": "vision LoRA rank 16 (3 epoch screen)",
+      "status": "reverted",
+      "avg_mae_pct": 35.1,
+      "completed_at": "2026-07-31T09:08:29.443784+00:00"
     }
   ]
 }
