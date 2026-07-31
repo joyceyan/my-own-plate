@@ -177,3 +177,19 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 
 **Insight**: TBD — update manually if needed.
 
+
+### Exp 11: LLM attention-only LoRA targets (3 epoch screen) — REVERTED
+
+**Params**: {"epochs": 3, "llm_lora_targets": ["q_proj", "k_proj", "v_proj", "o_proj"]}
+
+**Result**: 26.6/36.1/54.4/37.4 = **38.6% avg**, 0 parse failures.
+
+**Comparison vs best-so-far**:
+- calories: 23.8% → 26.6% (+2.8pp)
+- protein: 32.4% → 36.1% (+3.7pp)
+- fat: 45.0% → 54.4% (+9.4pp)
+- carbs: 33.1% → 37.4% (+4.3pp)
+- avg: 33.6% → 38.6% (+5.0pp)
+
+**Insight**: TBD — update manually if needed.
+

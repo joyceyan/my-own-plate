@@ -92,7 +92,10 @@
           "v_proj",
           "o_proj"
         ]
-      }
+      },
+      "status": "reverted",
+      "avg_mae_pct": 38.6,
+      "completed_at": "2026-07-31T16:45:20.038745+00:00"
     }
   ]
 }

@@ -1,7 +1,7 @@
 {
   "current": {
     "id": 11,
-    "phase": "config_committed",
+    "phase": "evaluating",
     "description": "LLM attention-only LoRA targets (3 epoch screen)",
     "start_time": "2026-07-31T13:03:40.015646+00:00",
     "params": {
@@ -12,7 +12,9 @@
         "v_proj",
         "o_proj"
       ]
-    }
+    },
+    "train_pid": 64633,
+    "eval_pid": 51094
   },
   "best": {
     "calories": {
