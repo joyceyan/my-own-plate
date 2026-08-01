@@ -159,7 +159,7 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 - carbs: 33.1% → 33.9% (+0.8pp)
 - avg: 33.6% → 35.1% (+1.5pp)
 
-**Insight**: TBD — update manually if needed.
+**Insight**: Reducing vision LoRA rank from 64 to 16 degraded every nutrient versus the fast baseline. Vision capacity clearly matters; rank 16 is not enough. We still have not tested a fair vision rank 32 screen in this pipeline (Exp 0's rank 32 was confounded by the gradient-checkpointing bug).
 
 
 ### Exp 10: constant LR 1e-5 (3 epoch screen) — REVERTED
@@ -175,7 +175,7 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 - carbs: 33.1% → 36.8% (+3.7pp)
 - avg: 33.6% → 35.2% (+1.6pp)
 
-**Insight**: TBD — update manually if needed.
+**Insight**: A constant LR of 1e-5 performed worse than the cosine 1e-5→1e-6 schedule, especially on carbs. The lower minimum LR and cosine decay appear beneficial for this short run.
 
 
 ### Exp 11: LLM attention-only LoRA targets (3 epoch screen) — REVERTED
@@ -191,5 +191,5 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 - carbs: 33.1% → 37.4% (+4.3pp)
 - avg: 33.6% → 38.6% (+5.0pp)
 
-**Insight**: TBD — update manually if needed.
+**Insight**: Limiting LLM LoRA targets to attention projections only hurt every nutrient, with fat spiking badly. The MLP projections (gate/up/down) are important for this task; the full attention+MLP target set should be retained.
 
