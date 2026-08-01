@@ -53,7 +53,7 @@ final class FoodAnalysisViewModel {
         modelReady = true
         #else
         do {
-            try await (modelService as! MLXModelService).loadModel()
+            try await modelService.loadModel()
             modelReady = true
         } catch {
             modelError = error.localizedDescription

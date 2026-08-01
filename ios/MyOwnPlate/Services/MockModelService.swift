@@ -3,6 +3,8 @@ import UIKit
 
 /// Returns realistic fake data for UI development and testing.
 final class MockModelService: ModelService, Sendable {
+    func loadModel() async throws {}
+
     func analyze(image: UIImage) async throws -> (NutritionResult, String) {
         try await Task.sleep(for: .seconds(1.5))
 

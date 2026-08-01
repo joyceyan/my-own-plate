@@ -17,7 +17,12 @@
 		1B98C85C9130DECB6C3AE1CB /* ReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6905ABE74F580173BDCDE44F /* ReviewView.swift */; };
 		20C4088EAF4C984D56FBA2B3 /* MLX in Frameworks */ = {isa = PBXBuildFile; productRef = 7474F85E27DBF76C5F711BF1 /* MLX */; };
 		251852F5F5EC3161243A5EB3 /* MealStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDBA24EC58A3BB4768DD5308 /* MealStore.swift */; };
+		2BC3368862072BCF4BDEB0F9 /* EntitlementService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0DFCA8D63F3B5E324C6067 /* EntitlementService.swift */; };
+		2E27FF6BDFB32C9814AB8065 /* myownplate-q4km.gguf in Resources */ = {isa = PBXBuildFile; fileRef = C042D59E3D3DF30C6F6829DA /* myownplate-q4km.gguf */; };
 		363E42F206A578A4AD83781F /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18E59B17DB30286C41B1DBB9 /* SplashView.swift */; };
+		3835448C581E2DEBB33C9FCA /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922DED27B44FB5042B8E0DF7 /* Keychain.swift */; };
+		3A77B9B8593B5C26EBDDA220 /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = 7EC4BC2CA633A2D1F5AD650C /* Tokenizers */; };
+		43311F5B0CB616E3528639CF /* mmproj-myownplate-f16.gguf in Resources */ = {isa = PBXBuildFile; fileRef = E0B91128908EA86E930818F4 /* mmproj-myownplate-f16.gguf */; };
 		463E51023DF2A8621338A4C8 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0381B2547A22A85144AC79D /* Theme.swift */; };
 		482FF1CCD9A7768DC3780A2F /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88027D4567247E68E05DDC83 /* TodayView.swift */; };
 		4F7C456A149334B179B586F8 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E7F592FD50D3AA4145DEF80 /* OnboardingView.swift */; };
@@ -25,20 +30,23 @@
 		593C68F45D764FD2E92FC2AB /* FoodAnalysisViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D83D019A030DA41DE280020D /* FoodAnalysisViewModel.swift */; };
 		59BC0758EBE67BB9B0C286E0 /* MyOwnPlateApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B05B133F537D1596AEAD126 /* MyOwnPlateApp.swift */; };
 		69C49505B8830F325998CAED /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5C189056E2F8F5F0EAE7005 /* ContentView.swift */; };
-		6B4073C51860B36781F76A44 /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = 7EC4BC2CA633A2D1F5AD650C /* Tokenizers */; };
+		6B4073C51860B36781F76A44 /* SuperwallKit in Frameworks */ = {isa = PBXBuildFile; productRef = 4492B9CCA51CEBF0E7E41889 /* SuperwallKit */; };
 		6C9B28D537465C520F89222F /* PhotoPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146F19E26985EC7AEB90565B /* PhotoPickerView.swift */; };
 		7CBEFFBCAC6D379C693ADEE4 /* UserProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8E86E7988BFC5D75B7130FD /* UserProfile.swift */; };
 		880A43A97348B358759F9EE2 /* RecalculatePlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 432A82AE5D0941C93D7F4C17 /* RecalculatePlanView.swift */; };
 		8C5F51324E5BF466681923EF /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49FAF104BEAAE4BEFC4058F4 /* CameraView.swift */; };
 		91051C3CABE54568D8E9159E /* ManualEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFC4C35C0B03B13CFCEF8098 /* ManualEntryView.swift */; };
 		98FD66D2818F80541B81AF8B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9055960489E683125EAF4727 /* Assets.xcassets */; };
+		9F969C5ACA11CC64494DDB3D /* BackendClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2062770C57E1B8031D59A14A /* BackendClient.swift */; };
 		AB097C0FCD09443869CCA704 /* NutritionResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0B584392CF5B63885A20704 /* NutritionResult.swift */; };
 		ADDF312A071C2C8BF184CAAC /* EditMealView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2332E2CE8FDEA3C8EED682FC /* EditMealView.swift */; };
+		B2A3B4621FE43831493B35F7 /* AccountSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8860D41D06AA150955E0E513 /* AccountSection.swift */; };
 		B4F59C0206ACFB061871AE38 /* MealDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AED1BF5A9635E5DF3C10D6F3 /* MealDetailView.swift */; };
 		C12C398EDFC29670DDF0E569 /* AnalysisFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD5C8A5C360DF944E6DDC484 /* AnalysisFlowView.swift */; };
 		C61275BE63413B532D2181FC /* Meal.swift in Sources */ = {isa = PBXBuildFile; fileRef = B58BE97EBAA4820B558CB959 /* Meal.swift */; };
 		DB950A32CBBBC059280B90AA /* MLXRandom in Frameworks */ = {isa = PBXBuildFile; productRef = 9D10CC4EC86D3BE710B49FAA /* MLXRandom */; };
 		DBF12FEA2E142A30C1D0AE31 /* MLXModelService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 868082787B31C75A9A7166F2 /* MLXModelService.swift */; };
+		E6A0C81D531DDB7AFA46AC07 /* SessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18B49B5C73AFD42B928D0E89 /* SessionManager.swift */; };
 		E94526CAEBEF00BF7F673754 /* NewEntrySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02C4378F828BB10DC1BB352 /* NewEntrySheet.swift */; };
 		FC1ACF9E6C9E5E060FFC8870 /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = F7A1FEAD104FBFAF2299BBBF /* MLXLMCommon */; };
 /* End PBXBuildFile section */
@@ -46,30 +54,38 @@
 /* Begin PBXFileReference section */
 		0323B436489E8DD5069C13E1 /* ModelService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelService.swift; sourceTree = "<group>"; };
 		146F19E26985EC7AEB90565B /* PhotoPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoPickerView.swift; sourceTree = "<group>"; };
+		18B49B5C73AFD42B928D0E89 /* SessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionManager.swift; sourceTree = "<group>"; };
 		18E59B17DB30286C41B1DBB9 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
 		1E7F592FD50D3AA4145DEF80 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		2062770C57E1B8031D59A14A /* BackendClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendClient.swift; sourceTree = "<group>"; };
 		2332E2CE8FDEA3C8EED682FC /* EditMealView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditMealView.swift; sourceTree = "<group>"; };
 		285327B012ED0CFA27C05783 /* ModelLoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelLoadingView.swift; sourceTree = "<group>"; };
 		3FB34BFB4CCAC61E09724CBA /* DailyGoal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyGoal.swift; sourceTree = "<group>"; };
 		432A82AE5D0941C93D7F4C17 /* RecalculatePlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecalculatePlanView.swift; sourceTree = "<group>"; };
 		49FAF104BEAAE4BEFC4058F4 /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
 		4B05B133F537D1596AEAD126 /* MyOwnPlateApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyOwnPlateApp.swift; sourceTree = "<group>"; };
+		5E0DFCA8D63F3B5E324C6067 /* EntitlementService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementService.swift; sourceTree = "<group>"; };
 		66AF1431ABF8492B201B0CBA /* MockModelService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockModelService.swift; sourceTree = "<group>"; };
 		6905ABE74F580173BDCDE44F /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
 		868082787B31C75A9A7166F2 /* MLXModelService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLXModelService.swift; sourceTree = "<group>"; };
 		88027D4567247E68E05DDC83 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
 		88324CCB51B2372FC6CAC0FE /* MyOwnPlate.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = MyOwnPlate.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8860D41D06AA150955E0E513 /* AccountSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSection.swift; sourceTree = "<group>"; };
 		9055960489E683125EAF4727 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		922DED27B44FB5042B8E0DF7 /* Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keychain.swift; sourceTree = "<group>"; };
 		9F44733AF6102F8BE1FE70AD /* AnalyzingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyzingView.swift; sourceTree = "<group>"; };
 		A1D115CC9F18445754670BCB /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		AED1BF5A9635E5DF3C10D6F3 /* MealDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealDetailView.swift; sourceTree = "<group>"; };
 		B0381B2547A22A85144AC79D /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		B58BE97EBAA4820B558CB959 /* Meal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Meal.swift; sourceTree = "<group>"; };
 		B8E86E7988BFC5D75B7130FD /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
+		C042D59E3D3DF30C6F6829DA /* myownplate-q4km.gguf */ = {isa = PBXFileReference; path = "myownplate-q4km.gguf"; sourceTree = "<group>"; };
 		CD5C8A5C360DF944E6DDC484 /* AnalysisFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisFlowView.swift; sourceTree = "<group>"; };
 		CFC4C35C0B03B13CFCEF8098 /* ManualEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualEntryView.swift; sourceTree = "<group>"; };
 		D02C4378F828BB10DC1BB352 /* NewEntrySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewEntrySheet.swift; sourceTree = "<group>"; };
 		D83D019A030DA41DE280020D /* FoodAnalysisViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodAnalysisViewModel.swift; sourceTree = "<group>"; };
+		DCF82CC06EB3F9101AEC9E29 /* MyOwnPlate.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MyOwnPlate.entitlements; sourceTree = "<group>"; };
+		E0B91128908EA86E930818F4 /* mmproj-myownplate-f16.gguf */ = {isa = PBXFileReference; path = "mmproj-myownplate-f16.gguf"; sourceTree = "<group>"; };
 		E5C189056E2F8F5F0EAE7005 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		EB915DF8B801950C00AA3A33 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		F0B584392CF5B63885A20704 /* NutritionResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionResult.swift; sourceTree = "<group>"; };
@@ -85,7 +101,8 @@
 				FC1ACF9E6C9E5E060FFC8870 /* MLXLMCommon in Frameworks */,
 				20C4088EAF4C984D56FBA2B3 /* MLX in Frameworks */,
 				DB950A32CBBBC059280B90AA /* MLXRandom in Frameworks */,
-				6B4073C51860B36781F76A44 /* Tokenizers in Frameworks */,
+				6B4073C51860B36781F76A44 /* SuperwallKit in Frameworks */,
+				3A77B9B8593B5C26EBDDA220 /* Tokenizers in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -96,6 +113,7 @@
 			isa = PBXGroup;
 			children = (
 				9055960489E683125EAF4727 /* Assets.xcassets */,
+				2253B4EFAA81591F9443531B /* GGUFModels */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -106,6 +124,15 @@
 				88324CCB51B2372FC6CAC0FE /* MyOwnPlate.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		2253B4EFAA81591F9443531B /* GGUFModels */ = {
+			isa = PBXGroup;
+			children = (
+				E0B91128908EA86E930818F4 /* mmproj-myownplate-f16.gguf */,
+				C042D59E3D3DF30C6F6829DA /* myownplate-q4km.gguf */,
+			);
+			path = GGUFModels;
 			sourceTree = "<group>";
 		};
 		84038DEA6766DDDCEBDCDD8B = {
@@ -119,6 +146,7 @@
 		908D05224DA61E0BE49DA6CB /* MyOwnPlate */ = {
 			isa = PBXGroup;
 			children = (
+				DCF82CC06EB3F9101AEC9E29 /* MyOwnPlate.entitlements */,
 				BF56D6F335930BAD02F2D153 /* App */,
 				D603E2B6C0FC9A2C5314F81B /* Models */,
 				14601D65E6D354F70E434EAD /* Resources */,
@@ -150,6 +178,7 @@
 		C4C4F24CD5766AAFB3EA7DDB /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				8860D41D06AA150955E0E513 /* AccountSection.swift */,
 				CD5C8A5C360DF944E6DDC484 /* AnalysisFlowView.swift */,
 				9F44733AF6102F8BE1FE70AD /* AnalyzingView.swift */,
 				49FAF104BEAAE4BEFC4058F4 /* CameraView.swift */,
@@ -185,9 +214,13 @@
 		FEDD3AEC47DB151656A161FA /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				2062770C57E1B8031D59A14A /* BackendClient.swift */,
+				5E0DFCA8D63F3B5E324C6067 /* EntitlementService.swift */,
+				922DED27B44FB5042B8E0DF7 /* Keychain.swift */,
 				868082787B31C75A9A7166F2 /* MLXModelService.swift */,
 				66AF1431ABF8492B201B0CBA /* MockModelService.swift */,
 				0323B436489E8DD5069C13E1 /* ModelService.swift */,
+				18B49B5C73AFD42B928D0E89 /* SessionManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -213,6 +246,7 @@
 				F7A1FEAD104FBFAF2299BBBF /* MLXLMCommon */,
 				7474F85E27DBF76C5F711BF1 /* MLX */,
 				9D10CC4EC86D3BE710B49FAA /* MLXRandom */,
+				4492B9CCA51CEBF0E7E41889 /* SuperwallKit */,
 				7EC4BC2CA633A2D1F5AD650C /* Tokenizers */,
 			);
 			productName = MyOwnPlate;
@@ -229,7 +263,7 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					EC3876FCF8B4995468FD947F = {
-						DevelopmentTeam = "";
+						DevelopmentTeam = SZ6N64JQG8;
 					};
 				};
 			};
@@ -245,6 +279,7 @@
 			packageReferences = (
 				9D416E2B162EDA5A5129CE9C /* XCRemoteSwiftPackageReference "mlx-swift" */,
 				E55530FDA78606FB438DC7F9 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
+				2EC7883CEC033C78586CEB34 /* XCRemoteSwiftPackageReference "Superwall-iOS" */,
 				C452DC7FEF7AA1053F54DF61 /* XCRemoteSwiftPackageReference "swift-transformers" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -263,6 +298,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				98FD66D2818F80541B81AF8B /* Assets.xcassets in Resources */,
+				43311F5B0CB616E3528639CF /* mmproj-myownplate-f16.gguf in Resources */,
+				2E27FF6BDFB32C9814AB8065 /* myownplate-q4km.gguf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -273,14 +310,18 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B2A3B4621FE43831493B35F7 /* AccountSection.swift in Sources */,
 				C12C398EDFC29670DDF0E569 /* AnalysisFlowView.swift in Sources */,
 				146C1DE36F97BD1B664F2081 /* AnalyzingView.swift in Sources */,
+				9F969C5ACA11CC64494DDB3D /* BackendClient.swift in Sources */,
 				8C5F51324E5BF466681923EF /* CameraView.swift in Sources */,
 				69C49505B8830F325998CAED /* ContentView.swift in Sources */,
 				1A8AEEF457D40DDAECBDD1E7 /* DailyGoal.swift in Sources */,
 				ADDF312A071C2C8BF184CAAC /* EditMealView.swift in Sources */,
+				2BC3368862072BCF4BDEB0F9 /* EntitlementService.swift in Sources */,
 				593C68F45D764FD2E92FC2AB /* FoodAnalysisViewModel.swift in Sources */,
 				0E6420E988ADAA1876A8D7BC /* HistoryView.swift in Sources */,
+				3835448C581E2DEBB33C9FCA /* Keychain.swift in Sources */,
 				DBF12FEA2E142A30C1D0AE31 /* MLXModelService.swift in Sources */,
 				91051C3CABE54568D8E9159E /* ManualEntryView.swift in Sources */,
 				C61275BE63413B532D2181FC /* Meal.swift in Sources */,
@@ -296,6 +337,7 @@
 				6C9B28D537465C520F89222F /* PhotoPickerView.swift in Sources */,
 				880A43A97348B358759F9EE2 /* RecalculatePlanView.swift in Sources */,
 				1B98C85C9130DECB6C3AE1CB /* ReviewView.swift in Sources */,
+				E6A0C81D531DDB7AFA46AC07 /* SessionManager.swift in Sources */,
 				09616FAFE244181EB745A457 /* SettingsView.swift in Sources */,
 				363E42F206A578A4AD83781F /* SplashView.swift in Sources */,
 				463E51023DF2A8621338A4C8 /* Theme.swift in Sources */,
@@ -376,7 +418,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = SZ6N64JQG8;
 				INFOPLIST_FILE = MyOwnPlate/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -396,7 +438,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = SZ6N64JQG8;
 				INFOPLIST_FILE = MyOwnPlate/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -490,6 +532,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		2EC7883CEC033C78586CEB34 /* XCRemoteSwiftPackageReference "Superwall-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/superwall/Superwall-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.16.1;
+			};
+		};
 		9D416E2B162EDA5A5129CE9C /* XCRemoteSwiftPackageReference "mlx-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/ml-explore/mlx-swift";
@@ -521,6 +571,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = E55530FDA78606FB438DC7F9 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
 			productName = MLXVLM;
+		};
+		4492B9CCA51CEBF0E7E41889 /* SuperwallKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2EC7883CEC033C78586CEB34 /* XCRemoteSwiftPackageReference "Superwall-iOS" */;
+			productName = SuperwallKit;
 		};
 		7474F85E27DBF76C5F711BF1 /* MLX */ = {
 			isa = XCSwiftPackageProductDependency;

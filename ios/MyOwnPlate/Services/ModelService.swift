@@ -6,6 +6,7 @@ import UIKit
 let kNutritionPrompt = "Estimate the nutritional content of this food image. Respond as JSON with keys: calories (kcal), protein (g), fat (g), carbs (g)."
 
 protocol ModelService: Sendable {
+    func loadModel() async throws
     func analyze(image: UIImage) async throws -> (NutritionResult, String)
 }
 

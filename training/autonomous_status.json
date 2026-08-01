@@ -1,21 +1,5 @@
 {
-  "current": {
-    "id": 11,
-    "phase": "evaluating",
-    "description": "LLM attention-only LoRA targets (3 epoch screen)",
-    "start_time": "2026-07-31T13:03:40.015646+00:00",
-    "params": {
-      "epochs": 3,
-      "llm_lora_targets": [
-        "q_proj",
-        "k_proj",
-        "v_proj",
-        "o_proj"
-      ]
-    },
-    "train_pid": 64633,
-    "eval_pid": 51094
-  },
+  "current": null,
   "best": {
     "calories": {
       "mae_pct": 18.5
@@ -113,6 +97,13 @@
       "status": "reverted",
       "avg_mae_pct": 35.2,
       "completed_at": "2026-07-31T13:03:40.015286+00:00"
+    },
+    {
+      "id": 11,
+      "description": "LLM attention-only LoRA targets (3 epoch screen)",
+      "status": "reverted",
+      "avg_mae_pct": 38.6,
+      "completed_at": "2026-07-31T16:45:20.165005+00:00"
     }
   ]
 }

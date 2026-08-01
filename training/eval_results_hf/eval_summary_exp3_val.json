@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-07-28T05:24:49.164512+00:00",
+  "mode": "val",
+  "model": "training/cache/Qwen3-VL-2B-Instruct",
+  "adapter_dir": "/Users/jyan/src/my-own-plate/training/output/adapter",
+  "vision_lora": "/Users/jyan/src/my-own-plate/training/output/vision_lora.pt",
+  "total_samples": 349,
+  "parse_failures": 0,
+  "metrics": {
+    "calories": {
+      "mae_pct": 23.8,
+      "std_pct": 33.9
+    },
+    "protein": {
+      "mae_pct": 32.4,
+      "std_pct": 56.8
+    },
+    "fat": {
+      "mae_pct": 45.0,
+      "std_pct": 87.4
+    },
+    "carbs": {
+      "mae_pct": 33.1,
+      "std_pct": 49.8
+    }
+  },
+  "avg_mae_pct": 33.6
+}

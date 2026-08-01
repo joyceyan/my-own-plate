@@ -1,0 +1,17 @@
+name = "myownplate-api"
+main = "src/index.ts"
+compatibility_date = "2025-07-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "myownplate-db"
+database_id = "ddd47050-fd20-4609-9ca6-8caf7ad6e9d4"
+
+[vars]
+APPLE_BUNDLE_ID = "com.myownplate.app"
+APPLE_TEAM_ID = "SZ6N64JQG8"
+# Numeric App Store ID from App Store Connect (https://apps.apple.com/app/id<APP_STORE_ID>).
+APP_STORE_ID = "0000000000"
+
+# Secrets (set with `npx wrangler secret put <NAME>`, never in this file):
+#   WEBHOOK_SECRET — shared secret for the Superwall webhook URL.

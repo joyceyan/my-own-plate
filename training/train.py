@@ -270,8 +270,8 @@ def parse_args():
         help="Disable gradient checkpointing",
     )
     parser.add_argument("--system-prompt", type=str, default=None)
-    parser.add_argument("--save-steps", type=int, default=500)
-    parser.add_argument("--eval-steps", type=int, default=500)
+    parser.add_argument("--save-steps", type=int, default=2000)
+    parser.add_argument("--eval-steps", type=int, default=2000)
     parser.add_argument("--logging-steps", type=int, default=10)
     parser.add_argument("--max-samples", type=int, default=None,
                         help="Limit train/val to N samples for smoke testing")
