@@ -142,7 +142,8 @@ def compute_metrics(ground_truths, predictions, parse_failed_flags):
 
 def load_model(model_path: str, adapter_dir: str, vision_lora_path: str,
                image_size: int = 384, vision_rank: int = 32, vision_alpha: int = 32,
-               projector_rank: int = 64, projector_alpha: int = 64):
+               projector_rank: int = 64, projector_alpha: int = 64,
+               vision_blocks: int | None = None):
     """Load base model, apply custom vision LoRA, load PEFT adapter and vision LoRA weights."""
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
     print(f"Using device: {device}")
@@ -159,7 +160,7 @@ def load_model(model_path: str, adapter_dir: str, vision_lora_path: str,
         device_map=device,
     )
 
-    apply_vision_block_lora(model, r=vision_rank, alpha=vision_alpha, dropout=0.0)
+    apply_vision_block_lora(model, r=vision_rank, alpha=vision_alpha, dropout=0.0, num_blocks=vision_blocks)
     apply_projector_lora(model, r=projector_rank, alpha=projector_alpha, dropout=0.0)
 
     model = PeftModel.from_pretrained(model, adapter_dir)
@@ -244,6 +245,12 @@ def parse_args():
     parser.add_argument("--lora-alpha-vision", type=int, default=32)
     parser.add_argument("--lora-rank-projector", type=int, default=64)
     parser.add_argument("--lora-alpha-projector", type=int, default=64)
+    parser.add_argument(
+        "--vision-blocks",
+        type=int,
+        default=None,
+        help="Number of deepest vision blocks adapted (default: all)",
+    )
     parser.add_argument("--max-samples", type=int, default=None)
     return parser.parse_args()
 
@@ -272,6 +279,7 @@ def main():
         vision_alpha=args.lora_alpha_vision,
         projector_rank=args.lora_rank_projector,
         projector_alpha=args.lora_alpha_projector,
+        vision_blocks=args.vision_blocks,
     )
 
     print("\nRunning inference...")

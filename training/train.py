@@ -231,6 +231,12 @@ def parse_args():
     parser.add_argument("--lora-alpha-vision", type=int, default=32)
     parser.add_argument("--lora-dropout", type=float, default=0.0)
     parser.add_argument(
+        "--vision-blocks",
+        type=int,
+        default=None,
+        help="Number of deepest vision blocks to adapt (default: all)",
+    )
+    parser.add_argument(
         "--vision-lora",
         dest="vision_lora",
         action="store_true",
@@ -334,6 +340,7 @@ def main():
             r=args.lora_rank_vision,
             alpha=args.lora_alpha_vision,
             dropout=args.lora_dropout,
+            num_blocks=args.vision_blocks,
         )
     if args.projector_lora:
         apply_projector_lora(
