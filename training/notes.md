@@ -59,11 +59,13 @@ Parse failures: 1 / 349 (0.3%)
 
 1. ~~**10-epoch baseline confirmation**~~: Done (Exp 12). 10 epochs = 27.2% avg, confirming MLX parity and slight improvement over 12 epochs.
 
-2. **Vision block subset: top-12 blocks**: The biggest win axis in MLX. Adapting only the deepest N blocks instead of all 24 improved results significantly (MLX: all 24 at r32 → 18.9%, top-12 at r32 → 19.5%, but top-12 at r32 with cosine LR → 18.5%). Requires adding `num_blocks` param to `apply_vision_block_lora` in `hf_utils.py`.
+2. ~~**Vision block subset: top-12 blocks**~~: Tried in Exp 13, significantly worse (+5.8pp avg). The HF pipeline benefits from all 24 blocks, unlike MLX.
 
-3. **Vision block subset: top-8 blocks**: Continue sweep if top-12 helps.
+3. ~~**Vision block subset: top-8 blocks**~~: Skipped — top-12 was already worse, top-8 would be worse still.
 
-4. **Vision rank on selected blocks**: Once best block count is found, try r64 on those blocks (MLX: r64 on top-12 got 19.0% vs r32's 19.5%).
+4. **Vision rank 64 on all 24 blocks (full 10-epoch run)**: Exp 3 tested vision r64 at only 3 epochs (unreliable). Try a full 10-epoch run with vision r64/alpha 64 on all 24 blocks.
+
+5. **Learning rate exploration**: Try higher peak LR (2e-5) or lower min LR (5e-7) with cosine decay.
 
 5. **Verify GGUF export**: After achieving good val MAE%, run `merge_and_export.py` and test GGUF with `compare_hf_gguf.py` to confirm no degradation.
 
@@ -236,4 +238,22 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 **Insight**: 10 epochs is slightly better than 12 overall (-0.6pp avg), confirming the MLX finding. Protein and fat both improved; calories slightly worse but within noise. The HF baseline (27.2%) is now very close to the MLX baseline at comparable config (27.4% in MLX exp 30). This confirms the two pipelines are near-equivalent and the remaining gap to 18.1% should be closeable through vision block selection experiments.
 
 **Also changed**: Increased default `--eval-steps` and `--save-steps` from 500 to 2000 to reduce checkpoint/eval overhead. This run took 22.5 hours due to the old 500-step defaults; future runs should be ~9-10 hours.
+
+
+### Exp 13: Vision block subset — top-12 blocks (10 epochs) — REVERTED
+
+**Hypothesis**: Adapting only the top-12 (deepest) vision blocks instead of all 24 will improve results, as it did in the MLX pipeline where vision block selection was the biggest win axis.
+
+**Change**: Added `--vision-blocks 12` flag. LoRA applied to blocks 12–23 only (48 layers instead of 96). All other params identical to Exp 12.
+
+**Result**: 22.1/30.5/50.5/28.9 = **33.0% avg**, 0 parse failures.
+
+**Comparison vs Exp 12 (best, 27.2% avg)**:
+- Calories: 19.3% → 22.1% (+2.8pp)
+- Protein: 26.9% → 30.5% (+3.6pp)
+- Fat: 37.4% → 50.5% (+13.1pp)
+- Carbs: 25.0% → 28.9% (+3.9pp)
+- Avg: 27.2% → 33.0% (+5.8pp)
+
+**Insight**: Unlike MLX where top-12 was the biggest win, in the HF pipeline restricting to fewer vision blocks significantly degraded all nutrients — fat especially (+13.1pp). The HF custom LoRA implementation appears to need all 24 blocks for best results. This is a major divergence from the MLX pipeline behavior. The block-subset strategy that closed the gap in MLX does not transfer to HF. Next: try increasing vision rank to 64 on all 24 blocks (full 10 epochs).
 
