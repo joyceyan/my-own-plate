@@ -224,6 +224,7 @@ training/logs/
 data/nutrition5k_hf/
 data/nutrition5k_all.jsonl
 *.safetensors
+*.gguf
 data/nutrition5k_train.jsonl
 data/nutrition5k_validation.jsonl
 data/nutrition5k_test.jsonl
