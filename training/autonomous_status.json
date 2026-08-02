@@ -2,20 +2,20 @@
   "current": null,
   "best": {
     "calories": {
-      "mae_pct": 18.5
+      "mae_pct": 19.3
     },
     "protein": {
-      "mae_pct": 28.6
+      "mae_pct": 26.9
     },
     "fat": {
-      "mae_pct": 39.1
+      "mae_pct": 37.4
     },
     "carbs": {
-      "mae_pct": 25.1
+      "mae_pct": 25.0
     }
   },
   "best_parse_failures": 0,
-  "best_exp": 2,
+  "best_exp": 12,
   "fast_best": {
     "calories": {
       "mae_pct": 23.8
@@ -104,6 +104,13 @@
       "status": "reverted",
       "avg_mae_pct": 38.6,
       "completed_at": "2026-07-31T16:45:20.165005+00:00"
+    },
+    {
+      "id": 12,
+      "description": "10-epoch baseline confirmation (default config)",
+      "status": "kept",
+      "avg_mae_pct": 27.2,
+      "completed_at": "2026-08-02T03:32:16+00:00"
     }
   ]
 }

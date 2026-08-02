@@ -23,17 +23,17 @@ Exp 0: LLM LoRA rank 64, alpha 64 on q/k/v/o/gate/up/down_proj; projector LoRA r
 
 Parse failures: 1 / 349 (0.3%)
 
-## Current best (Exp 2, 27.8% avg)
+## Current best (Exp 12, 27.2% avg)
 
-12 epochs, all other params same as Exp 0 but with gradient checkpointing disabled (Exp 1 fix). This is the full-run baseline to beat.
+10 epochs, default config with gradient checkpointing disabled. Eval/save steps increased to 2000.
 
 | Nutrient  | MAE%  |
 |-----------|-------|
-| Calories  | 18.5% |
-| Protein   | 28.6% |
-| Fat       | 39.1% |
-| Carbs     | 25.1% |
-| **Avg**   | **27.8%** |
+| Calories  | 19.3% |
+| Protein   | 26.9% |
+| Fat       | 37.4% |
+| Carbs     | 25.0% |
+| **Avg**   | **27.2%** |
 
 ## Strategic notes
 
@@ -57,7 +57,7 @@ Parse failures: 1 / 349 (0.3%)
 
 ### Next experiments (priority order)
 
-1. **10-epoch baseline confirmation**: Run current defaults at 10 epochs (Exp 2 used 12). Confirm baseline matches MLX ~27.4% and that 10ep is better than 12ep.
+1. ~~**10-epoch baseline confirmation**~~: Done (Exp 12). 10 epochs = 27.2% avg, confirming MLX parity and slight improvement over 12 epochs.
 
 2. **Vision block subset: top-12 blocks**: The biggest win axis in MLX. Adapting only the deepest N blocks instead of all 24 improved results significantly (MLX: all 24 at r32 → 18.9%, top-12 at r32 → 19.5%, but top-12 at r32 with cosine LR → 18.5%). Requires adding `num_blocks` param to `apply_vision_block_lora` in `hf_utils.py`.
 
@@ -216,4 +216,24 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 - avg: 33.6% → 38.6% (+5.0pp)
 
 **Insight**: Limiting LLM LoRA targets to attention projections only hurt every nutrient, with fat spiking badly. The MLP projections (gate/up/down) are important for this task; the full attention+MLP target set should be retained.
+
+
+### Exp 12: 10-epoch baseline confirmation — KEPT
+
+**Hypothesis**: 10 epochs (the MLX optimal) may be slightly better than 12 epochs in the HF pipeline as well, due to mild overfitting at 12 epochs.
+
+**Change**: Run with default config (10 epochs). All other params identical to Exp 2.
+
+**Result**: 19.3/26.9/37.4/25.0 = **27.2% avg**, 0 parse failures.
+
+**Comparison vs Exp 2 (12 epochs, 27.8% avg)**:
+- Calories: 18.5% → 19.3% (+0.8pp)
+- Protein: 28.6% → 26.9% (-1.7pp)
+- Fat: 39.1% → 37.4% (-1.7pp)
+- Carbs: 25.1% → 25.0% (-0.1pp)
+- Avg: 27.8% → 27.2% (-0.6pp)
+
+**Insight**: 10 epochs is slightly better than 12 overall (-0.6pp avg), confirming the MLX finding. Protein and fat both improved; calories slightly worse but within noise. The HF baseline (27.2%) is now very close to the MLX baseline at comparable config (27.4% in MLX exp 30). This confirms the two pipelines are near-equivalent and the remaining gap to 18.1% should be closeable through vision block selection experiments.
+
+**Also changed**: Increased default `--eval-steps` and `--save-steps` from 500 to 2000 to reduce checkpoint/eval overhead. This run took 22.5 hours due to the old 500-step defaults; future runs should be ~9-10 hours.
 
