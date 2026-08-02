@@ -23,17 +23,17 @@ Exp 0: LLM LoRA rank 64, alpha 64 on q/k/v/o/gate/up/down_proj; projector LoRA r
 
 Parse failures: 1 / 349 (0.3%)
 
-## Current best (Exp 12, 27.2% avg)
+## Current best (Exp 14, 26.2% avg)
 
-10 epochs, default config with gradient checkpointing disabled. Eval/save steps increased to 2000.
+10 epochs, vision LoRA r64/alpha64 on all 24 blocks. LLM r64. Projector r64.
 
 | Nutrient  | MAE%  |
 |-----------|-------|
-| Calories  | 19.3% |
-| Protein   | 26.9% |
-| Fat       | 37.4% |
-| Carbs     | 25.0% |
-| **Avg**   | **27.2%** |
+| Calories  | 17.6% |
+| Protein   | 25.4% |
+| Fat       | 39.6% |
+| Carbs     | 22.2% |
+| **Avg**   | **26.2%** |
 
 ## Strategic notes
 
@@ -63,9 +63,13 @@ Parse failures: 1 / 349 (0.3%)
 
 3. ~~**Vision block subset: top-8 blocks**~~: Skipped — top-12 was already worse, top-8 would be worse still.
 
-4. **Vision rank 64 on all 24 blocks (full 10-epoch run)**: Exp 3 tested vision r64 at only 3 epochs (unreliable). Try a full 10-epoch run with vision r64/alpha 64 on all 24 blocks.
+4. ~~**Vision rank 64 on all 24 blocks**~~: Done (Exp 14). Improved avg by 1.0pp (27.2% → 26.2%). Kept.
 
-5. **Learning rate exploration**: Try higher peak LR (2e-5) or lower min LR (5e-7) with cosine decay.
+5. **Vision rank 128 on all 24 blocks**: If r64 helped, r128 may help further.
+
+6. **Learning rate exploration**: Try higher peak LR (2e-5) or lower min LR (5e-7) with cosine decay.
+
+7. **LLM rank 128**: If vision capacity helps, LLM capacity might too.
 
 5. **Verify GGUF export**: After achieving good val MAE%, run `merge_and_export.py` and test GGUF with `compare_hf_gguf.py` to confirm no degradation.
 
@@ -256,4 +260,22 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 - Avg: 27.2% → 33.0% (+5.8pp)
 
 **Insight**: Unlike MLX where top-12 was the biggest win, in the HF pipeline restricting to fewer vision blocks significantly degraded all nutrients — fat especially (+13.1pp). The HF custom LoRA implementation appears to need all 24 blocks for best results. This is a major divergence from the MLX pipeline behavior. The block-subset strategy that closed the gap in MLX does not transfer to HF. Next: try increasing vision rank to 64 on all 24 blocks (full 10 epochs).
+
+
+### Exp 14: Vision LoRA rank 64 on all 24 blocks (10 epochs) — KEPT
+
+**Hypothesis**: Higher vision LoRA rank (r64 vs r32) on all 24 blocks gives the vision tower more adaptation capacity and may improve results.
+
+**Change**: `--lora-rank-vision 64 --lora-alpha-vision 64`. All other params identical to Exp 12.
+
+**Result**: 17.6/25.4/39.6/22.2 = **26.2% avg**, 1 parse failure.
+
+**Comparison vs Exp 12 (best, 27.2% avg)**:
+- Calories: 19.3% → 17.6% (-1.7pp)
+- Protein: 26.9% → 25.4% (-1.5pp)
+- Fat: 37.4% → 39.6% (+2.2pp)
+- Carbs: 25.0% → 22.2% (-2.8pp)
+- Avg: 27.2% → 26.2% (-1.0pp)
+
+**Insight**: Vision r64 improved the average by 1.0pp, with 3 of 4 nutrients improving. Fat regressed slightly (+2.2pp) but within tolerance. Doubling vision rank helped — more capacity in the vision tower lets the model learn better feature representations. The train loss was also slightly lower (0.800 vs 0.809). Next: try vision r128 to see if more capacity continues to help, and explore LR schedule changes.
 

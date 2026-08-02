@@ -10,3 +10,4 @@ experiment	cal_mae_pct	protein_mae_pct	fat_mae_pct	carbs_mae_pct	avg_mae_pct	par
 11	26.6	36.1	54.4	37.4	38.6	0	reverted	LLM attention-only LoRA targets (3 epoch screen)
 12	19.3	26.9	37.4	25.0	27.2	0	kept	10 epochs baseline confirmation (default config)
 13	22.1	30.5	50.5	28.9	33.0	0	reverted	vision block subset: top-12 blocks (10 epochs)
+14	17.6	25.4	39.6	22.2	26.2	1	kept	vision LoRA rank 64 on all 24 blocks (10 epochs)
