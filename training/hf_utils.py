@@ -90,24 +90,11 @@ def _get_vision_module(model: nn.Module):
     return vision
 
 
-def apply_vision_block_lora(model: nn.Module, r: int = 32, alpha: int = 32, dropout: float = 0.0, num_blocks: int | None = None):
-    """Apply manual LoRA to vision transformer blocks.
-
-    Args:
-        num_blocks: If set, only adapt the last N (deepest) blocks.
-                    If None, adapt all blocks.
-    """
+def apply_vision_block_lora(model: nn.Module, r: int = 32, alpha: int = 32, dropout: float = 0.0):
+    """Apply manual LoRA to all vision transformer blocks."""
     vision = _get_vision_module(model)
-    all_blocks = list(vision.blocks)
-    total_blocks = len(all_blocks)
-    if num_blocks is not None:
-        blocks = all_blocks[-num_blocks:]
-        print(f"Vision LoRA: targeting last {num_blocks} of {total_blocks} blocks (indices {total_blocks - num_blocks}–{total_blocks - 1})")
-    else:
-        blocks = all_blocks
-        print(f"Vision LoRA: targeting all {total_blocks} blocks")
     count = 0
-    for block in blocks:
+    for block in vision.blocks:
         for target in VISION_LORA_TARGETS:
             parts = target.split(".")
             module = block
