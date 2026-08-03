@@ -23,17 +23,17 @@ Exp 0: LLM LoRA rank 64, alpha 64 on q/k/v/o/gate/up/down_proj; projector LoRA r
 
 Parse failures: 1 / 349 (0.3%)
 
-## Current best (Exp 14, 26.2% avg)
+## Current best (Exp 16, 26.0% avg)
 
-10 epochs, vision LoRA r64/alpha64 on all 24 blocks. LLM r64. Projector r64.
+10 epochs, vision LoRA r64/alpha64 on all 24 blocks. LLM r64. Projector r64. LR 2e-5 → 1e-6 cosine.
 
 | Nutrient  | MAE%  |
 |-----------|-------|
-| Calories  | 17.6% |
-| Protein   | 25.4% |
-| Fat       | 39.6% |
-| Carbs     | 22.2% |
-| **Avg**   | **26.2%** |
+| Calories  | 18.0% |
+| Protein   | 23.5% |
+| Fat       | 40.4% |
+| Carbs     | 21.9% |
+| **Avg**   | **26.0%** |
 
 ## Strategic notes
 
@@ -67,11 +67,13 @@ Parse failures: 1 / 349 (0.3%)
 
 5. ~~**Vision rank 128 on all 24 blocks**~~: Tried in Exp 15, slightly worse (+0.2pp avg) and 5x more parse failures. Vision r64 is the sweet spot.
 
-6. **Higher peak LR (2e-5)**: May help converge to a better minimum. Cosine decay to 1e-6.
+6. ~~**Higher peak LR (2e-5)**~~: Done (Exp 16). Marginal improvement (26.2% → 26.0%). Kept.
 
 7. **LLM rank 128**: More LLM capacity might help close the gap.
 
 8. **Warmup**: Currently 0 warmup. Try 5% warmup ratio.
+
+9. **Projector rank sweep**: Try r128 or r32 for the VL projector.
 
 9. **Verify GGUF export**: After achieving good val MAE%, run `merge_and_export.py` and test GGUF with `compare_hf_gguf.py` to confirm no degradation.
 
@@ -298,4 +300,22 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 - Avg: 26.2% → 26.4% (+0.2pp)
 
 **Insight**: Vision r128 hit diminishing returns. The train loss continued to decrease (0.796 vs 0.800) but generalization didn't improve — classic overfitting to training data. Parse failures also jumped 5x (1→5), suggesting the extra capacity allows the model to produce less structured outputs. Vision r64 is the sweet spot. The rank progression: r32=27.2%, r64=26.2%, r128=26.4%. Next: explore LR schedule changes — higher peak LR (2e-5) may help the model explore better.
+
+
+### Exp 16: Higher peak LR 2e-5 (10 epochs) — KEPT
+
+**Hypothesis**: A higher peak LR (2e-5 vs 1e-5) with cosine decay to 1e-6 may help the model explore and converge to a better minimum.
+
+**Change**: `--learning-rate 2e-5`. Vision r64 on all 24 blocks. All other params identical to Exp 14.
+
+**Result**: 18.0/23.5/40.4/21.9 = **26.0% avg**, 0 parse failures.
+
+**Comparison vs Exp 14 (best, 26.2% avg)**:
+- Calories: 17.6% → 18.0% (+0.4pp)
+- Protein: 25.4% → 23.5% (-1.9pp)
+- Fat: 39.6% → 40.4% (+0.8pp)
+- Carbs: 22.2% → 21.9% (-0.3pp)
+- Avg: 26.2% → 26.0% (-0.2pp)
+
+**Insight**: Higher peak LR gave a marginal improvement (-0.2pp avg). Protein improved notably (-1.9pp) while fat regressed slightly (+0.8pp). Train loss was much lower (0.748 vs 0.800), suggesting better optimization, but the val improvement was small — the model may be learning the training set better without generalizing much more. The improvement is real but small. Diminishing returns are setting in from incremental hyperparameter tuning. Need a more impactful change next — LLM rank 128 or a structural change.
 
