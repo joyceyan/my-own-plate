@@ -65,13 +65,15 @@ Parse failures: 1 / 349 (0.3%)
 
 4. ~~**Vision rank 64 on all 24 blocks**~~: Done (Exp 14). Improved avg by 1.0pp (27.2% → 26.2%). Kept.
 
-5. **Vision rank 128 on all 24 blocks**: If r64 helped, r128 may help further.
+5. ~~**Vision rank 128 on all 24 blocks**~~: Tried in Exp 15, slightly worse (+0.2pp avg) and 5x more parse failures. Vision r64 is the sweet spot.
 
-6. **Learning rate exploration**: Try higher peak LR (2e-5) or lower min LR (5e-7) with cosine decay.
+6. **Higher peak LR (2e-5)**: May help converge to a better minimum. Cosine decay to 1e-6.
 
-7. **LLM rank 128**: If vision capacity helps, LLM capacity might too.
+7. **LLM rank 128**: More LLM capacity might help close the gap.
 
-5. **Verify GGUF export**: After achieving good val MAE%, run `merge_and_export.py` and test GGUF with `compare_hf_gguf.py` to confirm no degradation.
+8. **Warmup**: Currently 0 warmup. Try 5% warmup ratio.
+
+9. **Verify GGUF export**: After achieving good val MAE%, run `merge_and_export.py` and test GGUF with `compare_hf_gguf.py` to confirm no degradation.
 
 ### Deferred / speculative
 
@@ -278,4 +280,22 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 - Avg: 27.2% → 26.2% (-1.0pp)
 
 **Insight**: Vision r64 improved the average by 1.0pp, with 3 of 4 nutrients improving. Fat regressed slightly (+2.2pp) but within tolerance. Doubling vision rank helped — more capacity in the vision tower lets the model learn better feature representations. The train loss was also slightly lower (0.800 vs 0.809). Next: try vision r128 to see if more capacity continues to help, and explore LR schedule changes.
+
+
+### Exp 15: Vision LoRA rank 128 on all 24 blocks (10 epochs) — REVERTED
+
+**Hypothesis**: If r64 improved over r32, r128 may continue the trend.
+
+**Change**: `--lora-rank-vision 128 --lora-alpha-vision 128`. All other params identical to Exp 14.
+
+**Result**: 18.6/25.4/37.1/24.4 = **26.4% avg**, 5 parse failures.
+
+**Comparison vs Exp 14 (best, 26.2% avg)**:
+- Calories: 17.6% → 18.6% (+1.0pp)
+- Protein: 25.4% → 25.4% (0.0pp)
+- Fat: 39.6% → 37.1% (-2.5pp)
+- Carbs: 22.2% → 24.4% (+2.2pp)
+- Avg: 26.2% → 26.4% (+0.2pp)
+
+**Insight**: Vision r128 hit diminishing returns. The train loss continued to decrease (0.796 vs 0.800) but generalization didn't improve — classic overfitting to training data. Parse failures also jumped 5x (1→5), suggesting the extra capacity allows the model to produce less structured outputs. Vision r64 is the sweet spot. The rank progression: r32=27.2%, r64=26.2%, r128=26.4%. Next: explore LR schedule changes — higher peak LR (2e-5) may help the model explore better.
 
