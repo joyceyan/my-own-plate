@@ -96,6 +96,9 @@ On Apple Silicon laptops, long GPU commands trigger macOS "Impacting Interactivi
 
 Do not increase batch size or enable `mx.compile` without ample free memory. Close browsers/Docker/Slack before training — aim for <16 GB system RAM in use.
 
+### macOS Sleep Prevention
+**Always wrap long-running commands (training, evaluation) with `caffeinate -i -s`** to prevent macOS from sleeping and suspending the process. Closing the laptop lid without `caffeinate` will pause training entirely.
+
 ### Data Pipeline
 - `prepare_nutrition5k.py` reads raw N5k CSVs → single `nutrition5k_all.jsonl` (clean, normalize, filter — no splitting).
 - `convert_dataset.py` reads `nutrition5k_all.jsonl` → 80/10/10 train/val/test split → HuggingFace parquet + per-split JSONL files. All split logic lives here.

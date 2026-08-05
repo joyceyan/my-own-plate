@@ -111,7 +111,8 @@ LOOP FOREVER:
 4. **Train the model** (runs in background — training takes 8-12+ hours on M2 Pro):
    ```bash
    # MUST use run_in_background=true — training exceeds the 10-minute Bash timeout.
-   cd /Users/jyan/src/my-own-plate && .venv/bin/python training/train.py \
+   # MUST wrap with caffeinate to prevent macOS sleep from pausing training.
+   cd /Users/jyan/src/my-own-plate && caffeinate -i -s .venv/bin/python training/train.py \
        --model training/cache/Qwen3-VL-2B-Instruct \
        --train-data ~/src/my-own-plate/data/nutrition5k_hf_chat \
        --output-dir ~/src/my-own-plate/training/output \
@@ -123,7 +124,8 @@ LOOP FOREVER:
 5. **Evaluate on validation set** (runs in background — eval takes 20-40+ min on M2 Pro):
    ```bash
    # MUST use run_in_background=true — evaluation exceeds the 10-minute Bash timeout.
-   cd /Users/jyan/src/my-own-plate && .venv/bin/python training/evaluate.py --mode val
+   # MUST wrap with caffeinate to prevent macOS sleep from pausing evaluation.
+   cd /Users/jyan/src/my-own-plate && caffeinate -i -s .venv/bin/python training/evaluate.py --mode val
    ```
    Use `run_in_background=true` on the Bash tool call. Once notified of completion, read the summary JSON at `training/eval_results_hf/eval_summary_val.json` for precise numbers.
 
