@@ -13,3 +13,4 @@ experiment	cal_mae_pct	protein_mae_pct	fat_mae_pct	carbs_mae_pct	avg_mae_pct	par
 14	17.6	25.4	39.6	22.2	26.2	1	kept	vision LoRA rank 64 on all 24 blocks (10 epochs)
 15	18.6	25.4	37.1	24.4	26.4	5	reverted	vision LoRA rank 128 on all 24 blocks (10 epochs)
 16	18.0	23.5	40.4	21.9	26.0	0	kept	peak LR 2e-5 cosine to 1e-6, vision r64 (10 epochs)
+17	16.6	20.2	29.1	20.9	21.7	1	kept	LLM r128/alpha128, vision r64, LR 2e-5 (10 epochs)

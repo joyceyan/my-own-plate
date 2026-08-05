@@ -23,17 +23,17 @@ Exp 0: LLM LoRA rank 64, alpha 64 on q/k/v/o/gate/up/down_proj; projector LoRA r
 
 Parse failures: 1 / 349 (0.3%)
 
-## Current best (Exp 16, 26.0% avg)
+## Current best (Exp 17, 21.7% avg)
 
-10 epochs, vision LoRA r64/alpha64 on all 24 blocks. LLM r64. Projector r64. LR 2e-5 → 1e-6 cosine.
+10 epochs, LLM r128/alpha128, vision LoRA r64/alpha64 on all 24 blocks. Projector r64. LR 2e-5 → 1e-6 cosine.
 
 | Nutrient  | MAE%  |
 |-----------|-------|
-| Calories  | 18.0% |
-| Protein   | 23.5% |
-| Fat       | 40.4% |
-| Carbs     | 21.9% |
-| **Avg**   | **26.0%** |
+| Calories  | 16.6% |
+| Protein   | 20.2% |
+| Fat       | 29.1% |
+| Carbs     | 20.9% |
+| **Avg**   | **21.7%** |
 
 ## Strategic notes
 
@@ -69,11 +69,13 @@ Parse failures: 1 / 349 (0.3%)
 
 6. ~~**Higher peak LR (2e-5)**~~: Done (Exp 16). Marginal improvement (26.2% → 26.0%). Kept.
 
-7. **LLM rank 128**: More LLM capacity might help close the gap.
+7. ~~**LLM rank 128**~~: Done (Exp 17). Massive improvement (26.0% → 21.7%, -4.3pp). Fat dropped 11.3pp. Kept.
 
-8. **Warmup**: Currently 0 warmup. Try 5% warmup ratio.
+8. **LLM rank 256**: If r128 was a huge win, r256 might help further.
 
-9. **Projector rank sweep**: Try r128 or r32 for the VL projector.
+9. **Warmup**: Currently 0 warmup. Try 5% warmup ratio.
+
+10. **Projector rank sweep**: Try r128 for the VL projector.
 
 9. **Verify GGUF export**: After achieving good val MAE%, run `merge_and_export.py` and test GGUF with `compare_hf_gguf.py` to confirm no degradation.
 
@@ -318,4 +320,22 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 - Avg: 26.2% → 26.0% (-0.2pp)
 
 **Insight**: Higher peak LR gave a marginal improvement (-0.2pp avg). Protein improved notably (-1.9pp) while fat regressed slightly (+0.8pp). Train loss was much lower (0.748 vs 0.800), suggesting better optimization, but the val improvement was small — the model may be learning the training set better without generalizing much more. The improvement is real but small. Diminishing returns are setting in from incremental hyperparameter tuning. Need a more impactful change next — LLM rank 128 or a structural change.
+
+
+### Exp 17: LLM LoRA rank 128 (10 epochs) — KEPT
+
+**Hypothesis**: More LLM capacity (r128 vs r64) may help close the remaining gap to MLX best. The LLM is the largest component and r64 may be under-parameterized for this task.
+
+**Change**: `--lora-rank-llm 128 --lora-alpha-llm 128`. Vision r64, LR 2e-5. All other params identical to Exp 16.
+
+**Result**: 16.6/20.2/29.1/20.9 = **21.7% avg**, 1 parse failure.
+
+**Comparison vs Exp 16 (best, 26.0% avg)**:
+- Calories: 18.0% → 16.6% (-1.4pp)
+- Protein: 23.5% → 20.2% (-3.3pp)
+- Fat: 40.4% → 29.1% (-11.3pp)
+- Carbs: 21.9% → 20.9% (-1.0pp)
+- Avg: 26.0% → 21.7% (-4.3pp)
+
+**Insight**: LLM rank 128 was the biggest single improvement in the HF pipeline (-4.3pp avg). All four nutrients improved, with fat showing a dramatic -11.3pp drop — finally breaking below the N5k baseline (29.1% vs 34.2%). The LLM was clearly the bottleneck: r64 was insufficient for this 2B-param model on this task. Train loss also dropped significantly (0.710 vs 0.748). The gap to MLX best is now only 3.6pp (21.7% vs 18.1%). Next: try LLM r256 to see if more capacity continues to help.
 
