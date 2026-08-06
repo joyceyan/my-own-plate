@@ -75,11 +75,13 @@ Parse failures: 1 / 349 (0.3%)
 
 9. ~~**Warmup**~~: Tried 5% in Exp 19, significantly worse (+2.5pp avg, fat +5.8pp). Warmup wastes steps on this small dataset.
 
-10. **Lower min LR (5e-7)**: Cosine decay to 5e-7 instead of 1e-6 for finer final convergence.
+10. ~~**Lower min LR (5e-7)**~~: Tried in Exp 20, much worse (+3.3pp avg, fat +9.7pp). Min LR 1e-6 is optimal.
 
-11. **Projector rank sweep**: Currently projector uses LLM rank (r128). Try separating and using r64.
+11. **Projector rank sweep**: Currently projector uses LLM rank (r128). Try separating — use r64 for projector while keeping LLM at r128.
 
-12. **Original LR (1e-5) with LLM r128**: The LR 2e-5 was only marginal (+0.2pp). Maybe 1e-5 works better with the larger r128 capacity.
+12. **Original LR (1e-5) with LLM r128**: The LR 2e-5 was only marginal at r64. Maybe 1e-5 works better with the larger r128 capacity.
+
+13. **Vision r128 + LLM r128**: Vision r128 was worse at LLM r64, but might synergize with LLM r128.
 
 9. **Verify GGUF export**: After achieving good val MAE%, run `merge_and_export.py` and test GGUF with `compare_hf_gguf.py` to confirm no degradation.
 
@@ -378,4 +380,22 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 - Avg: 21.7% → 24.2% (+2.5pp)
 
 **Insight**: Warmup was clearly harmful. The 5% warmup period wastes ~1396 steps ramping up, which on this small dataset (2792 train samples, 10 epochs) means the model spent half an epoch at suboptimal LR. Fat regressed worst (+5.8pp), suggesting the vision tower especially needs full LR from the start. Warmup is more useful for larger datasets or longer runs. Added to settled list.
+
+
+### Exp 20: Lower min LR 5e-7 (10 epochs) — REVERTED
+
+**Hypothesis**: Decaying to a lower min LR (5e-7 vs 1e-6) gives finer convergence at the tail of training.
+
+**Change**: `--min-lr 5e-7`. LLM r128, vision r64, LR 2e-5. All other params identical to Exp 17.
+
+**Result**: 17.9/21.1/38.8/22.1 = **25.0% avg**, 0 parse failures.
+
+**Comparison vs Exp 17 (best, 21.7% avg)**:
+- Calories: 16.6% → 17.9% (+1.3pp)
+- Protein: 20.2% → 21.1% (+0.9pp)
+- Fat: 29.1% → 38.8% (+9.7pp) — far exceeds 5pp tolerance
+- Carbs: 20.9% → 22.1% (+1.2pp)
+- Avg: 21.7% → 25.0% (+3.3pp)
+
+**Insight**: Lower min LR was much worse, especially fat (+9.7pp). The cosine curve decaying to 5e-7 spends more of the final epochs at very low LRs, effectively reducing the total learning. The 1e-6 min LR provides a better floor that keeps the optimizer making useful updates throughout. LR schedule is now settled: 2e-5 → 1e-6 cosine, no warmup.
 
