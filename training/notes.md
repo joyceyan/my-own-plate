@@ -73,11 +73,13 @@ Parse failures: 1 / 349 (0.3%)
 
 8. ~~**LLM rank 256**~~: Tried in Exp 18, worse (+1.0pp avg). Same overfitting pattern as vision r128. LLM r128 is the sweet spot.
 
-9. **Warmup**: Currently 0 warmup. Try 5% warmup ratio with current best config.
+9. ~~**Warmup**~~: Tried 5% in Exp 19, significantly worse (+2.5pp avg, fat +5.8pp). Warmup wastes steps on this small dataset.
 
-10. **Projector rank sweep**: Currently projector uses LLM rank (r128). Try separating and using r64 or r256.
+10. **Lower min LR (5e-7)**: Cosine decay to 5e-7 instead of 1e-6 for finer final convergence.
 
-11. **Lower min LR (5e-7)**: Cosine decay to 5e-7 instead of 1e-6 for finer final convergence.
+11. **Projector rank sweep**: Currently projector uses LLM rank (r128). Try separating and using r64.
+
+12. **Original LR (1e-5) with LLM r128**: The LR 2e-5 was only marginal (+0.2pp). Maybe 1e-5 works better with the larger r128 capacity.
 
 9. **Verify GGUF export**: After achieving good val MAE%, run `merge_and_export.py` and test GGUF with `compare_hf_gguf.py` to confirm no degradation.
 
@@ -358,4 +360,22 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 - Avg: 21.7% → 22.7% (+1.0pp)
 
 **Insight**: Same overfitting pattern as vision r128 (Exp 15). Train loss dropped significantly (0.649 vs 0.710) but all nutrients regressed on validation. Parse failures also increased 3x. The 13% trainable parameter ratio (318M of 2.4B) is too high — the model memorizes rather than generalizes. LLM r128 (7.5% trainable) is the sweet spot. Note: the projector rank is tied to `--lora-rank-llm`, so the projector also went to r256 here — this coupling should be broken in future experiments.
+
+
+### Exp 19: 5% warmup (10 epochs) — REVERTED
+
+**Hypothesis**: Linear warmup (5% of steps) may stabilize early training and improve final convergence.
+
+**Change**: Added `--warmup-ratio 0.05`. LLM r128, vision r64, LR 2e-5. Implemented warmup via `SequentialLR(LinearLR + CosineAnnealingLR)`.
+
+**Result**: 17.4/22.4/34.9/22.1 = **24.2% avg**, 1 parse failure.
+
+**Comparison vs Exp 17 (best, 21.7% avg)**:
+- Calories: 16.6% → 17.4% (+0.8pp)
+- Protein: 20.2% → 22.4% (+2.2pp)
+- Fat: 29.1% → 34.9% (+5.8pp) — exceeds 5pp tolerance
+- Carbs: 20.9% → 22.1% (+1.2pp)
+- Avg: 21.7% → 24.2% (+2.5pp)
+
+**Insight**: Warmup was clearly harmful. The 5% warmup period wastes ~1396 steps ramping up, which on this small dataset (2792 train samples, 10 epochs) means the model spent half an epoch at suboptimal LR. Fat regressed worst (+5.8pp), suggesting the vision tower especially needs full LR from the start. Warmup is more useful for larger datasets or longer runs. Added to settled list.
 
