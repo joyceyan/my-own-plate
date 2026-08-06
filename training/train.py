@@ -35,7 +35,7 @@ from transformers import (
     TrainingArguments,
 )
 from transformers.trainer_utils import get_last_checkpoint
-from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
+from torch.optim.lr_scheduler import CosineAnnealingLR
 from datasets import load_dataset
 from peft import get_peft_model
 
@@ -168,19 +168,11 @@ class NutritionTrainer(Trainer):
             optimizer = optimizer or self.optimizer
             if optimizer is None:
                 raise RuntimeError("optimizer is not set")
-            warmup_steps = int(num_training_steps * self.args.warmup_ratio)
-            if warmup_steps > 0:
-                warmup = LinearLR(optimizer, start_factor=1e-2, total_iters=warmup_steps)
-                cosine = CosineAnnealingLR(
-                    optimizer, T_max=num_training_steps - warmup_steps, eta_min=self.args.min_lr,
-                )
-                self.lr_scheduler = SequentialLR(
-                    optimizer, schedulers=[warmup, cosine], milestones=[warmup_steps],
-                )
-            else:
-                self.lr_scheduler = CosineAnnealingLR(
-                    optimizer, T_max=num_training_steps, eta_min=self.args.min_lr,
-                )
+            self.lr_scheduler = CosineAnnealingLR(
+                optimizer,
+                T_max=num_training_steps,
+                eta_min=self.args.min_lr,
+            )
             if self.args.lr_scheduler_type != "cosine":
                 self.args.lr_scheduler_type = "cosine"
         return self.lr_scheduler
@@ -238,8 +230,6 @@ def parse_args():
     parser.add_argument("--lora-rank-vision", type=int, default=32)
     parser.add_argument("--lora-alpha-vision", type=int, default=32)
     parser.add_argument("--lora-dropout", type=float, default=0.0)
-    parser.add_argument("--warmup-ratio", type=float, default=0.0,
-                        help="Warmup ratio for LR scheduler (default: 0.0)")
     parser.add_argument(
         "--vision-lora",
         dest="vision_lora",
@@ -394,7 +384,7 @@ def main():
         learning_rate=args.learning_rate,
         lr_scheduler_type="cosine",
         min_lr=args.min_lr,
-        warmup_ratio=args.warmup_ratio,
+        warmup_ratio=0.0,
         eval_strategy="steps",
         eval_steps=args.eval_steps,
         save_strategy="steps",
