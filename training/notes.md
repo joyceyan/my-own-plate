@@ -71,11 +71,13 @@ Parse failures: 1 / 349 (0.3%)
 
 7. ~~**LLM rank 128**~~: Done (Exp 17). Massive improvement (26.0% → 21.7%, -4.3pp). Fat dropped 11.3pp. Kept.
 
-8. **LLM rank 256**: If r128 was a huge win, r256 might help further.
+8. ~~**LLM rank 256**~~: Tried in Exp 18, worse (+1.0pp avg). Same overfitting pattern as vision r128. LLM r128 is the sweet spot.
 
-9. **Warmup**: Currently 0 warmup. Try 5% warmup ratio.
+9. **Warmup**: Currently 0 warmup. Try 5% warmup ratio with current best config.
 
-10. **Projector rank sweep**: Try r128 for the VL projector.
+10. **Projector rank sweep**: Currently projector uses LLM rank (r128). Try separating and using r64 or r256.
+
+11. **Lower min LR (5e-7)**: Cosine decay to 5e-7 instead of 1e-6 for finer final convergence.
 
 9. **Verify GGUF export**: After achieving good val MAE%, run `merge_and_export.py` and test GGUF with `compare_hf_gguf.py` to confirm no degradation.
 
@@ -338,4 +340,22 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 - Avg: 26.0% → 21.7% (-4.3pp)
 
 **Insight**: LLM rank 128 was the biggest single improvement in the HF pipeline (-4.3pp avg). All four nutrients improved, with fat showing a dramatic -11.3pp drop — finally breaking below the N5k baseline (29.1% vs 34.2%). The LLM was clearly the bottleneck: r64 was insufficient for this 2B-param model on this task. Train loss also dropped significantly (0.710 vs 0.748). The gap to MLX best is now only 3.6pp (21.7% vs 18.1%). Next: try LLM r256 to see if more capacity continues to help.
+
+
+### Exp 18: LLM LoRA rank 256 (10 epochs) — REVERTED
+
+**Hypothesis**: If r128 was a huge win (-4.3pp), r256 may continue the trend.
+
+**Change**: `--lora-rank-llm 256 --lora-alpha-llm 256`. Vision r64, LR 2e-5. All other params identical to Exp 17.
+
+**Result**: 16.9/21.7/29.8/22.3 = **22.7% avg**, 3 parse failures.
+
+**Comparison vs Exp 17 (best, 21.7% avg)**:
+- Calories: 16.6% → 16.9% (+0.3pp)
+- Protein: 20.2% → 21.7% (+1.5pp)
+- Fat: 29.1% → 29.8% (+0.7pp)
+- Carbs: 20.9% → 22.3% (+1.4pp)
+- Avg: 21.7% → 22.7% (+1.0pp)
+
+**Insight**: Same overfitting pattern as vision r128 (Exp 15). Train loss dropped significantly (0.649 vs 0.710) but all nutrients regressed on validation. Parse failures also increased 3x. The 13% trainable parameter ratio (318M of 2.4B) is too high — the model memorizes rather than generalizes. LLM r128 (7.5% trainable) is the sweet spot. Note: the projector rank is tied to `--lora-rank-llm`, so the projector also went to r256 here — this coupling should be broken in future experiments.
 
