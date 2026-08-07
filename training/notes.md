@@ -77,11 +77,13 @@ Parse failures: 1 / 349 (0.3%)
 
 10. ~~**Lower min LR (5e-7)**~~: Tried in Exp 20, much worse (+3.3pp avg, fat +9.7pp). Min LR 1e-6 is optimal.
 
-11. **Projector rank sweep**: Currently projector uses LLM rank (r128). Try separating — use r64 for projector while keeping LLM at r128.
+11. ~~**Projector rank sweep**~~: Tried r64 in Exp 21, much worse (+2.8pp). Projector needs r128 (tied to LLM rank).
 
-12. **Original LR (1e-5) with LLM r128**: The LR 2e-5 was only marginal at r64. Maybe 1e-5 works better with the larger r128 capacity.
+12. **Gradient accumulation 4**: Effective batch size 4 via gradient accumulation may smooth gradients and improve generalization without extra memory.
 
-13. **Vision r128 + LLM r128**: Vision r128 was worse at LLM r64, but might synergize with LLM r128.
+13. **LR 1e-5 with LLM r128**: The LR 2e-5 was marginal at r64. Larger capacity might benefit from a lower, more stable LR.
+
+14. **12 epochs with LLM r128**: Higher capacity may need more training to converge fully.
 
 9. **Verify GGUF export**: After achieving good val MAE%, run `merge_and_export.py` and test GGUF with `compare_hf_gguf.py` to confirm no degradation.
 
@@ -398,4 +400,22 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 - Avg: 21.7% → 25.0% (+3.3pp)
 
 **Insight**: Lower min LR was much worse, especially fat (+9.7pp). The cosine curve decaying to 5e-7 spends more of the final epochs at very low LRs, effectively reducing the total learning. The 1e-6 min LR provides a better floor that keeps the optimizer making useful updates throughout. LR schedule is now settled: 2e-5 → 1e-6 cosine, no warmup.
+
+
+### Exp 21: Projector r64 decoupled from LLM r128 (10 epochs) — REVERTED
+
+**Hypothesis**: The projector was inadvertently using LLM rank (r128) in exp 17. Reducing to r64 (matching MLX best) might reduce overfitting in the projector.
+
+**Change**: Added `--lora-rank-projector 64 --lora-alpha-projector 64` (decoupled from LLM). LLM r128, vision r64, LR 2e-5.
+
+**Result**: 18.9/22.6/33.8/22.6 = **24.5% avg**, 0 parse failures.
+
+**Comparison vs Exp 17 (best, 21.7% avg)**:
+- Calories: 16.6% → 18.9% (+2.3pp)
+- Protein: 20.2% → 22.6% (+2.4pp)
+- Fat: 29.1% → 33.8% (+4.7pp)
+- Carbs: 20.9% → 22.6% (+1.7pp)
+- Avg: 21.7% → 24.5% (+2.8pp)
+
+**Insight**: Projector r64 was significantly worse than r128. The projector benefits from high rank — it's the bottleneck between the vision tower and LLM, so it needs sufficient capacity to translate visual features into the language model's representation space. Projector r128 (tied to LLM rank) is correct. Four consecutive reverts (exps 18-21) suggest incremental hyperparam tuning around exp 17's config is exhausted. Need a more fundamental change.
 
