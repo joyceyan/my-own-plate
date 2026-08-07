@@ -229,10 +229,6 @@ def parse_args():
     )
     parser.add_argument("--lora-rank-vision", type=int, default=32)
     parser.add_argument("--lora-alpha-vision", type=int, default=32)
-    parser.add_argument("--lora-rank-projector", type=int, default=None,
-                        help="Projector LoRA rank (default: same as --lora-rank-llm)")
-    parser.add_argument("--lora-alpha-projector", type=int, default=None,
-                        help="Projector LoRA alpha (default: same as --lora-alpha-llm)")
     parser.add_argument("--lora-dropout", type=float, default=0.0)
     parser.add_argument(
         "--vision-lora",
@@ -340,12 +336,10 @@ def main():
             dropout=args.lora_dropout,
         )
     if args.projector_lora:
-        proj_r = args.lora_rank_projector if args.lora_rank_projector is not None else args.lora_rank_llm
-        proj_alpha = args.lora_alpha_projector if args.lora_alpha_projector is not None else args.lora_alpha_llm
         apply_projector_lora(
             model,
-            r=proj_r,
-            alpha=proj_alpha,
+            r=args.lora_rank_llm,
+            alpha=args.lora_alpha_llm,
             dropout=args.lora_dropout,
         )
     lora_config = get_peft_lora_config(
