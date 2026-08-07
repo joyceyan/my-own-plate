@@ -272,6 +272,7 @@ def parse_args():
     parser.add_argument("--system-prompt", type=str, default=None)
     parser.add_argument("--save-steps", type=int, default=2000)
     parser.add_argument("--eval-steps", type=int, default=2000)
+    parser.add_argument("--gradient-accumulation-steps", type=int, default=1)
     parser.add_argument("--logging-steps", type=int, default=10)
     parser.add_argument("--max-samples", type=int, default=None,
                         help="Limit train/val to N samples for smoke testing")
@@ -398,7 +399,7 @@ def main():
         dataloader_num_workers=0,
         remove_unused_columns=False,
         report_to="none",
-        gradient_accumulation_steps=1,
+        gradient_accumulation_steps=args.gradient_accumulation_steps,
         max_grad_norm=1.0,
         weight_decay=0.0,
     )
