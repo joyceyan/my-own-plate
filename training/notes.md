@@ -79,11 +79,13 @@ Parse failures: 1 / 349 (0.3%)
 
 11. ~~**Projector rank sweep**~~: Tried r64 in Exp 21, much worse (+2.8pp). Projector needs r128 (tied to LLM rank).
 
-12. **Gradient accumulation 4**: Effective batch size 4 via gradient accumulation may smooth gradients and improve generalization without extra memory.
+12. ~~**Gradient accumulation 4**~~: Tried in Exp 22, worse (+2.3pp). Fewer optimizer steps = under-training. Batch size 1 is optimal.
 
-13. **LR 1e-5 with LLM r128**: The LR 2e-5 was marginal at r64. Larger capacity might benefit from a lower, more stable LR.
+13. **LR 1e-5 with LLM r128**: 2e-5 was marginal at r64. Larger capacity might benefit from a lower, more stable peak LR.
 
 14. **12 epochs with LLM r128**: Higher capacity may need more training to converge fully.
+
+15. **Vision r128 + LLM r128**: Vision r128 was tested alone at LLM r64 (Exp 15). May synergize with LLM r128.
 
 9. **Verify GGUF export**: After achieving good val MAE%, run `merge_and_export.py` and test GGUF with `compare_hf_gguf.py` to confirm no degradation.
 
@@ -418,4 +420,22 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 - Avg: 21.7% → 24.5% (+2.8pp)
 
 **Insight**: Projector r64 was significantly worse than r128. The projector benefits from high rank — it's the bottleneck between the vision tower and LLM, so it needs sufficient capacity to translate visual features into the language model's representation space. Projector r128 (tied to LLM rank) is correct. Four consecutive reverts (exps 18-21) suggest incremental hyperparam tuning around exp 17's config is exhausted. Need a more fundamental change.
+
+
+### Exp 22: Gradient accumulation 4 (10 epochs) — REVERTED
+
+**Hypothesis**: Effective batch size 4 via gradient accumulation smooths gradients and improves generalization.
+
+**Change**: `--gradient-accumulation-steps 4`. LLM r128, vision r64, LR 2e-5. All other params identical to Exp 17.
+
+**Result**: 17.1/23.9/31.2/23.7 = **24.0% avg**, 3 parse failures.
+
+**Comparison vs Exp 17 (best, 21.7% avg)**:
+- Calories: 16.6% → 17.1% (+0.5pp)
+- Protein: 20.2% → 23.9% (+3.7pp)
+- Fat: 29.1% → 31.2% (+2.1pp)
+- Carbs: 20.9% → 23.7% (+2.8pp)
+- Avg: 21.7% → 24.0% (+2.3pp)
+
+**Insight**: Gradient accumulation 4 reduced optimizer steps from 27920 to 6980 (4x fewer). The cosine LR schedule had fewer steps to work with, and the model saw fewer weight updates per epoch. The higher train loss (0.766 vs 0.710) confirms under-training. On this small dataset with batch size 1, each sample provides useful gradient signal — accumulating 4 just delays updates. Batch size 1 is optimal for this setup.
 

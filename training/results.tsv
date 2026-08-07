@@ -18,3 +18,4 @@ experiment	cal_mae_pct	protein_mae_pct	fat_mae_pct	carbs_mae_pct	avg_mae_pct	par
 19	17.4	22.4	34.9	22.1	24.2	1	reverted	5% warmup, LLM r128, vision r64, LR 2e-5 (10 epochs)
 20	17.9	21.1	38.8	22.1	25.0	0	reverted	min LR 5e-7, LLM r128, vision r64, LR 2e-5 (10 epochs)
 21	18.9	22.6	33.8	22.6	24.5	0	reverted	projector r64 (decoupled from LLM r128), vision r64, LR 2e-5 (10 epochs)
+22	17.1	23.9	31.2	23.7	24.0	3	reverted	gradient accumulation 4, LLM r128, vision r64, LR 2e-5 (10 epochs)
