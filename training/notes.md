@@ -81,11 +81,13 @@ Parse failures: 1 / 349 (0.3%)
 
 12. ~~**Gradient accumulation 4**~~: Tried in Exp 22, worse (+2.3pp). Fewer optimizer steps = under-training. Batch size 1 is optimal.
 
-13. **LR 1e-5 with LLM r128**: 2e-5 was marginal at r64. Larger capacity might benefit from a lower, more stable peak LR.
+13. ~~**LR 1e-5 with LLM r128**~~: Tried in Exp 23, much worse (+4.4pp, 19 parse failures). LR 2e-5 is required for r128.
 
 14. **12 epochs with LLM r128**: Higher capacity may need more training to converge fully.
 
 15. **Vision r128 + LLM r128**: Vision r128 was tested alone at LLM r64 (Exp 15). May synergize with LLM r128.
+
+16. **LR 3e-5 with LLM r128**: If 2e-5 > 1e-5, maybe 3e-5 is even better.
 
 9. **Verify GGUF export**: After achieving good val MAE%, run `merge_and_export.py` and test GGUF with `compare_hf_gguf.py` to confirm no degradation.
 
@@ -438,4 +440,23 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 - Avg: 21.7% → 24.0% (+2.3pp)
 
 **Insight**: Gradient accumulation 4 reduced optimizer steps from 27920 to 6980 (4x fewer). The cosine LR schedule had fewer steps to work with, and the model saw fewer weight updates per epoch. The higher train loss (0.766 vs 0.710) confirms under-training. On this small dataset with batch size 1, each sample provides useful gradient signal — accumulating 4 just delays updates. Batch size 1 is optimal for this setup.
+
+
+### Exp 23: LR 1e-5 with LLM r128 (10 epochs) — REVERTED
+
+**Hypothesis**: Larger capacity (r128) might benefit from a more conservative 1e-5 peak LR to prevent overshooting.
+
+**Change**: `--learning-rate 1e-5`. LLM r128, vision r64. All other params identical to Exp 17 except LR.
+
+**Result**: 18.9/22.7/39.0/23.9 = **26.1% avg**, 19 parse failures.
+
+**Comparison vs Exp 17 (best, 21.7% avg)**:
+- Calories: 16.6% → 18.9% (+2.3pp)
+- Protein: 20.2% → 22.7% (+2.5pp)
+- Fat: 29.1% → 39.0% (+9.9pp)
+- Carbs: 20.9% → 23.9% (+3.0pp)
+- Avg: 21.7% → 26.1% (+4.4pp)
+- Parse failures: 1 → 19 (19x)
+
+**Insight**: LR 1e-5 is far too low for LLM r128 — the higher capacity needs the stronger 2e-5 LR to converge. The 19 parse failures indicate the model didn't learn the output format well enough. This is the opposite of what might be expected (larger rank usually needs lower LR to avoid instability), suggesting that the LoRA scaling (alpha/r = 1.0) effectively normalizes the step size regardless of rank, and the main effect of higher LR is more total learning, not larger per-parameter steps.
 
