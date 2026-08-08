@@ -83,11 +83,13 @@ Parse failures: 1 / 349 (0.3%)
 
 13. ~~**LR 1e-5 with LLM r128**~~: Tried in Exp 23, much worse (+4.4pp, 19 parse failures). LR 2e-5 is required for r128.
 
-14. **12 epochs with LLM r128**: Higher capacity may need more training to converge fully.
+14. ~~**12 epochs with LLM r128**~~: Tried in Exp 24, worse (+1.3pp avg, 24 parse failures). r128 overfits at 12 epochs. 10 epochs remains optimal.
 
-15. **Vision r128 + LLM r128**: Vision r128 was tested alone at LLM r64 (Exp 15). May synergize with LLM r128.
+15. **LR 3e-5 with LLM r128**: If 2e-5 > 1e-5, maybe 3e-5 continues the trend.
 
-16. **LR 3e-5 with LLM r128**: If 2e-5 > 1e-5, maybe 3e-5 is even better.
+16. **Vision r128 + LLM r128**: Vision r128 tested alone at r64 LLM (Exp 15). May synergize with r128 LLM.
+
+17. **GGUF export verification**: The primary goal is GGUF quality. Even 21.7% HF → clean GGUF beats 18.1% MLX → 67% GGUF.
 
 9. **Verify GGUF export**: After achieving good val MAE%, run `merge_and_export.py` and test GGUF with `compare_hf_gguf.py` to confirm no degradation.
 
@@ -459,4 +461,23 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 - Parse failures: 1 → 19 (19x)
 
 **Insight**: LR 1e-5 is far too low for LLM r128 — the higher capacity needs the stronger 2e-5 LR to converge. The 19 parse failures indicate the model didn't learn the output format well enough. This is the opposite of what might be expected (larger rank usually needs lower LR to avoid instability), suggesting that the LoRA scaling (alpha/r = 1.0) effectively normalizes the step size regardless of rank, and the main effect of higher LR is more total learning, not larger per-parameter steps.
+
+
+### Exp 24: 12 epochs with LLM r128 (LR 2e-5) — REVERTED
+
+**Hypothesis**: r128 has more capacity that may benefit from 2 more epochs of training.
+
+**Change**: `--epochs 12`. LLM r128, vision r64, LR 2e-5. All other params identical to Exp 17.
+
+**Result**: 18.1/22.6/29.7/21.7 = **23.0% avg**, 24 parse failures.
+
+**Comparison vs Exp 17 (best, 21.7% avg)**:
+- Calories: 16.6% → 18.1% (+1.5pp)
+- Protein: 20.2% → 22.6% (+2.4pp)
+- Fat: 29.1% → 29.7% (+0.6pp)
+- Carbs: 20.9% → 21.7% (+0.8pp)
+- Avg: 21.7% → 23.0% (+1.3pp)
+- Parse failures: 1 → 24 (24x)
+
+**Insight**: 12 epochs with r128 clearly overfits. The 24 parse failures are the worst yet — the model starts generating malformed outputs. The train loss (0.652 vs 0.710) dropped much further but validation degraded. At r128 with LR 2e-5, 10 epochs is already at the overfitting boundary. Seven consecutive reverts (exps 18-24) confirm that the exp 17 config (LLM r128, vision r64, LR 2e-5, 10 epochs) is a strong local optimum resistant to incremental changes.
 
