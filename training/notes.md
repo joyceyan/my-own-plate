@@ -85,11 +85,11 @@ Parse failures: 1 / 349 (0.3%)
 
 14. ~~**12 epochs with LLM r128**~~: Tried in Exp 24, worse (+1.3pp avg, 24 parse failures). r128 overfits at 12 epochs. 10 epochs remains optimal.
 
-15. **LR 3e-5 with LLM r128**: If 2e-5 > 1e-5, maybe 3e-5 continues the trend.
+15. ~~**LR 3e-5 with LLM r128**~~: Tried in Exp 25, slightly worse (+0.5pp, 6x parse failures). 2e-5 confirmed optimal.
 
-16. **Vision r128 + LLM r128**: Vision r128 tested alone at r64 LLM (Exp 15). May synergize with r128 LLM.
+16. **GGUF export verification**: Re-train exp 17 config, merge, export GGUF, benchmark F16/Q8_0/Q4_K_M.
 
-17. **GGUF export verification**: The primary goal is GGUF quality. Even 21.7% HF → clean GGUF beats 18.1% MLX → 67% GGUF.
+17. **Vision r128 + LLM r128**: Deferred — may try after GGUF verification if gap to MLX persists.
 
 9. **Verify GGUF export**: After achieving good val MAE%, run `merge_and_export.py` and test GGUF with `compare_hf_gguf.py` to confirm no degradation.
 
@@ -480,4 +480,23 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 - Parse failures: 1 → 24 (24x)
 
 **Insight**: 12 epochs with r128 clearly overfits. The 24 parse failures are the worst yet — the model starts generating malformed outputs. The train loss (0.652 vs 0.710) dropped much further but validation degraded. At r128 with LR 2e-5, 10 epochs is already at the overfitting boundary. Seven consecutive reverts (exps 18-24) confirm that the exp 17 config (LLM r128, vision r64, LR 2e-5, 10 epochs) is a strong local optimum resistant to incremental changes.
+
+
+### Exp 25: LR 3e-5 with LLM r128 (10 epochs) — REVERTED
+
+**Hypothesis**: If 2e-5 > 1e-5, maybe 3e-5 continues the trend.
+
+**Change**: `--learning-rate 3e-5`. LLM r128, vision r64. All other params identical to Exp 17.
+
+**Result**: 16.4/22.0/29.8/20.7 = **22.2% avg**, 6 parse failures.
+
+**Comparison vs Exp 17 (best, 21.7% avg)**:
+- Calories: 16.6% → 16.4% (-0.2pp)
+- Protein: 20.2% → 22.0% (+1.8pp)
+- Fat: 29.1% → 29.8% (+0.7pp)
+- Carbs: 20.9% → 20.7% (-0.2pp)
+- Avg: 21.7% → 22.2% (+0.5pp)
+- Parse failures: 1 → 6 (6x)
+
+**Insight**: LR 3e-5 slightly overshoots — the model learns more aggressively (train loss 0.673 vs 0.710) but the extra optimization hurts generalization and increases parse failures. The LR progression is now complete: 1e-5=26.1%, **2e-5=21.7%** (optimal), 3e-5=22.2%. Eight consecutive reverts confirm exp 17 as the definitive optimum for the HF pipeline. Pivoting to GGUF export verification.
 
