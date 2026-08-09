@@ -77,6 +77,10 @@ def parse_args():
         default="q4_k_m",
         help="Quantization type for the language model GGUF",
     )
+    parser.add_argument("--vision-rank", type=int, default=64)
+    parser.add_argument("--vision-alpha", type=int, default=64)
+    parser.add_argument("--projector-rank", type=int, default=128)
+    parser.add_argument("--projector-alpha", type=int, default=128)
     parser.add_argument(
         "--keep-merged-hf",
         action="store_true",
@@ -123,8 +127,8 @@ def main():
     # 3. Apply custom vision LoRA scaffolding and load trained weights
     # ------------------------------------------------------------------
     print("\n[3/6] Loading custom vision LoRA")
-    apply_vision_block_lora(model, r=32, alpha=32, dropout=0.0)
-    apply_projector_lora(model, r=64, alpha=64, dropout=0.0)
+    apply_vision_block_lora(model, r=args.vision_rank, alpha=args.vision_alpha, dropout=0.0)
+    apply_projector_lora(model, r=args.projector_rank, alpha=args.projector_alpha, dropout=0.0)
     load_custom_lora(model, args.vision_lora)
 
     # ------------------------------------------------------------------
@@ -177,7 +181,15 @@ def main():
         str(gguf_lm),
         args.quantization,
     ], check=True)
-    gguf_f16.unlink()
+
+    print(f"\nQuantizing language model to Q8_0")
+    gguf_q8 = output_dir / "myownplate-q8_0.gguf"
+    subprocess.run([
+        str(quantize_bin),
+        str(gguf_f16),
+        str(gguf_q8),
+        "q8_0",
+    ], check=True)
 
     print(f"\nExporting vision projector to GGUF F16 (--mmproj)")
     subprocess.run([
@@ -193,7 +205,9 @@ def main():
 
     print("\n" + "=" * 60)
     print("Export complete")
-    print(f"  Language model: {gguf_lm} ({gguf_lm.stat().st_size / 1e9:.2f} GB)")
+    print(f"  LM F16:          {gguf_f16} ({gguf_f16.stat().st_size / 1e9:.2f} GB)")
+    print(f"  LM Q8_0:         {gguf_q8} ({gguf_q8.stat().st_size / 1e9:.2f} GB)")
+    print(f"  LM {args.quantization.upper():13s} {gguf_lm} ({gguf_lm.stat().st_size / 1e9:.2f} GB)")
     print(f"  Vision projector: {gguf_mmproj} ({gguf_mmproj.stat().st_size / 1e6:.0f} MB)")
     print("=" * 60)
 
