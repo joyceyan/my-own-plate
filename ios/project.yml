@@ -33,10 +33,11 @@ targets:
           - Resources/Info.plist
           - Resources/Model
           - Resources/GGUFModels
-    resources:
-      - path: MyOwnPlate/Resources/Model
-        buildPhase: resources
       - path: MyOwnPlate/Resources/GGUFModels
+        type: folder
+        buildPhase: resources
+      - path: MyOwnPlate/Resources/Model
+        type: folder
         buildPhase: resources
     info:
       path: MyOwnPlate/Resources/Info.plist
