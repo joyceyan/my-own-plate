@@ -106,15 +106,21 @@ final class LlamaCppModelService: ModelService, @unchecked Sendable {
         return (nutrition, Self.cleanFoodDescription(description))
     }
 
-    /// Strip markdown, quotes, and trailing punctuation from the description.
+    /// Strip markdown, quotes, punctuation and capitalize the first letter.
     private static func cleanFoodDescription(_ raw: String) -> String {
         var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         // Remove surrounding quotes
         if s.hasPrefix("\"") && s.hasSuffix("\"") { s = String(s.dropFirst().dropLast()) }
         // Remove markdown bold
         s = s.replacingOccurrences(of: "**", with: "")
+        // Strip punctuation from the end
+        while let last = s.last, last.isPunctuation { s = String(s.dropLast()) }
         // Trim again
         s = s.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Capitalize first letter
+        if let first = s.first, !first.isUppercase {
+            s = first.uppercased() + s.dropFirst()
+        }
         return s.isEmpty ? "Meal" : s
     }
 
