@@ -7,6 +7,9 @@ options:
   createIntermediateGroups: true
 
 packages:
+  llama-swift:
+    url: https://github.com/mattt/llama.swift
+    from: "2.9999.0"
   mlx-swift-lm:
     url: https://github.com/ml-explore/mlx-swift-lm.git
     from: "3.31.3"
@@ -29,9 +32,11 @@ targets:
         excludes:
           - Resources/Info.plist
           - Resources/Model
-          - Services/RunAnywhereModelService.swift
+          - Resources/GGUFModels
     resources:
       - path: MyOwnPlate/Resources/Model
+        buildPhase: resources
+      - path: MyOwnPlate/Resources/GGUFModels
         buildPhase: resources
     info:
       path: MyOwnPlate/Resources/Info.plist
@@ -41,6 +46,8 @@ targets:
         UILaunchScreen:
           UIColorName: ""
     dependencies:
+      - package: llama-swift
+        product: LlamaSwift
       - package: mlx-swift-lm
         product: MLXVLM
       - package: mlx-swift-lm

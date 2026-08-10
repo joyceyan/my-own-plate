@@ -44,7 +44,7 @@ final class FoodAnalysisViewModel {
         #if targetEnvironment(simulator)
         self.modelService = MockModelService()
         #else
-        self.modelService = MLXModelService()
+        self.modelService = LlamaCppModelService()
         #endif
     }
 

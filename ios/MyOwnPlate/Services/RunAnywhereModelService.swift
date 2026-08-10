@@ -2,6 +2,9 @@ import Foundation
 import LlamaSwift
 import UIKit
 
+/// Prompt for food description (second inference pass).
+private let kDescriptionPrompt = "Briefly describe the food in this image in one sentence."
+
 /// On-device VLM inference using llama.cpp via the LlamaSwift package.
 /// Loads a two-file GGUF model (language model + vision projector) from the app bundle.
 final class LlamaCppModelService: ModelService, @unchecked Sendable {
@@ -79,10 +82,10 @@ final class LlamaCppModelService: ModelService, @unchecked Sendable {
         }
 
         // Convert UIImage to RGB pixel data
-        let rgbData = try imageToRGB(image, size: 448)
+        let rgbData = try imageToRGB(image, size: 384)
 
         // Create mtmd bitmap — rgbData must stay alive until we're done with both calls
-        guard let bitmap = mtmd_bitmap_init(448, 448, rgbData) else {
+        guard let bitmap = mtmd_bitmap_init(384, 384, rgbData) else {
             throw ModelServiceError.imageEncodingFailed
         }
         defer { mtmd_bitmap_free(bitmap) }
@@ -94,7 +97,19 @@ final class LlamaCppModelService: ModelService, @unchecked Sendable {
         // Second call: food description
         let description = try runInference(prompt: kDescriptionPrompt, bitmap: bitmap, maxTokens: 128)
 
-        return (nutrition, cleanFoodDescription(description))
+        return (nutrition, Self.cleanFoodDescription(description))
+    }
+
+    /// Strip markdown, quotes, and trailing punctuation from the description.
+    private static func cleanFoodDescription(_ raw: String) -> String {
+        var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Remove surrounding quotes
+        if s.hasPrefix("\"") && s.hasSuffix("\"") { s = String(s.dropFirst().dropLast()) }
+        // Remove markdown bold
+        s = s.replacingOccurrences(of: "**", with: "")
+        // Trim again
+        s = s.trimmingCharacters(in: .whitespacesAndNewlines)
+        return s.isEmpty ? "Meal" : s
     }
 
     // MARK: - Single Inference Pass
