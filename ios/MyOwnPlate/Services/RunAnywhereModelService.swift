@@ -3,7 +3,13 @@ import LlamaSwift
 import UIKit
 
 /// Prompt for food description (second inference pass).
-private let kDescriptionPrompt = "Briefly describe the food in this image in one sentence."
+private let kDescriptionPrompt = """
+Generate a concise, neutral name for this meal based on the image. Use at most six words. \
+Capitalize only the first word and use lowercase for the rest. Do not use any punctuation. \
+Focus on visible ingredients and the kind of meal. Avoid opinion words, portion words, and value judgments.
+Good examples: "Yogurt with berries", "Cheese pizza", "Noodles with meat and vegetables", "Steak with vegetables".
+Bad examples: "massive pizza feast", "yummy noodles!", "small anorexic bite of cake".
+"""
 
 /// On-device VLM inference using llama.cpp via the LlamaSwift package.
 /// Loads a two-file GGUF model (language model + vision projector) from the app bundle.
