@@ -75,9 +75,9 @@ def parse_nutrition(raw: str) -> dict | None:
     if match:
         try:
             parsed = json.loads(match.group())
-            if all(n in parsed for n in NUTRIENTS):
+            if all(n in parsed and parsed[n] is not None for n in NUTRIENTS):
                 return {n: float(parsed[n]) for n in NUTRIENTS}
-        except (json.JSONDecodeError, ValueError):
+        except (json.JSONDecodeError, ValueError, TypeError):
             pass
 
     # Regex fallback

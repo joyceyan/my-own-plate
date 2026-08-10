@@ -87,7 +87,7 @@ Parse failures: 1 / 349 (0.3%)
 
 15. ~~**LR 3e-5 with LLM r128**~~: Tried in Exp 25, slightly worse (+0.5pp, 6x parse failures). 2e-5 confirmed optimal.
 
-16. **GGUF export verification**: Re-train exp 17 config, merge, export GGUF, benchmark F16/Q8_0/Q4_K_M.
+16. ~~**GGUF export verification**~~: Done. HF→GGUF F16 is lossless (23.7%). Q4_K_M = 28.3%, beats N5k baselines. Critical fix: `--image-min-tokens 130 --image-max-tokens 130`.
 
 17. **Vision r128 + LLM r128**: Deferred — may try after GGUF verification if gap to MLX persists.
 
@@ -499,4 +499,30 @@ Result: 35.4/46.6/86.5/55.0 = **55.9% avg**, 1 parse failure.
 - Parse failures: 1 → 6 (6x)
 
 **Insight**: LR 3e-5 slightly overshoots — the model learns more aggressively (train loss 0.673 vs 0.710) but the extra optimization hurts generalization and increases parse failures. The LR progression is now complete: 1e-5=26.1%, **2e-5=21.7%** (optimal), 3e-5=22.2%. Eight consecutive reverts confirm exp 17 as the definitive optimum for the HF pipeline. Pivoting to GGUF export verification.
+
+
+### GGUF Export Verification — SUCCESS
+
+**Goal**: Verify the HF→GGUF export path doesn't degrade accuracy (unlike the MLX→GGUF path which went from 18.1% to 67.4%).
+
+**Process**: Re-trained exp 17 config, merged all adapters, exported to GGUF F16/Q4_K_M via updated llama.cpp, benchmarked on val set.
+
+**Critical fix**: llama-server was processing images at a different resolution than training. Adding `--image-min-tokens 130 --image-max-tokens 130` to match the HF training resolution (384x384, producing 130 merged vision tokens) fixed the 46.1% → 23.7% degradation.
+
+**Results**:
+
+| Pipeline | Cal | Pro | Fat | Carbs | Avg | Size |
+|----------|-----|-----|-----|-------|-----|------|
+| HF (adapters) | 17.9 | 23.2 | 33.7 | 23.0 | 24.4% | ~4.3 GB |
+| GGUF F16 | 19.4 | 22.0 | 30.4 | 23.1 | 23.7% | 3.45 GB |
+| GGUF Q4_K_M | 22.1 | 24.1 | 38.1 | 29.2 | 28.3% | 1.11 GB |
+| N5k baselines | 26.1 | 29.5 | 34.2 | 31.9 | 30.4% | — |
+| Old MLX→GGUF | — | — | — | — | 67.4% | — |
+
+**Key findings**:
+- HF→GGUF F16 is lossless (23.7% vs 24.4%, within noise)
+- Q4_K_M degrades ~4.6pp from F16 (28.3% vs 23.7%) — significant but still beats N5k baselines
+- Q4_K_M at 1.11 GB + mmproj 819 MB = 1.93 GB total — fits on iPhone 13 Pro (3 GB jetsam limit)
+- The HF pipeline completely solves the GGUF export problem (28.3% vs old 67.4%)
+- Image token matching between training and inference is critical for VLM deployment
 
