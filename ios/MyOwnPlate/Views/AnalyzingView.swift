@@ -54,6 +54,7 @@ struct AnalyzingView: View {
 
             Spacer()
         }
-        .background(Theme.background)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Theme.background.ignoresSafeArea())
     }
 }
