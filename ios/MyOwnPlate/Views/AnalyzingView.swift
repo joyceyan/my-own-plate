@@ -5,16 +5,6 @@ struct AnalyzingView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Nav bar
-            HStack {
-                Spacer()
-                Text("Analyzing")
-                    .font(.headline)
-                    .foregroundStyle(Theme.textPrimary)
-                Spacer()
-            }
-            .padding(.vertical, 12)
-
             Spacer()
 
             // Photo
@@ -51,8 +41,8 @@ struct AnalyzingView: View {
                     ProgressView()
                         .tint(.white)
 
-                    Text("Identifying your meal...")
-                        .font(.headline)
+                    Text("Analyzing")
+                        .font(.title2.weight(.bold))
                         .foregroundStyle(Theme.textPrimary)
 
                     Text("Estimating calories and macros")
