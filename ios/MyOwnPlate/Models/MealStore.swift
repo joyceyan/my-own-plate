@@ -192,7 +192,9 @@ final class MealStore {
             let data = try JSONEncoder().encode(meals)
             try data.write(to: Self.mealsFileURL, options: .atomic)
         } catch {
+            #if DEBUG
             print("Failed to save meals: \(error)")
+            #endif
         }
     }
 

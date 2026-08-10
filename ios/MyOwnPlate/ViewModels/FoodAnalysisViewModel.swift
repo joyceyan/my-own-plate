@@ -16,13 +16,7 @@ final class FoodAnalysisViewModel {
     var userProfile: UserProfile = UserProfile.load() {
         didSet { userProfile.save() }
     }
-    /// Set to true to always show onboarding on launch, even if previously completed.
-    private static let DEBUG_RESET_ONBOARDING = true
-
     var hasCompletedOnboarding: Bool = {
-        #if DEBUG
-        if DEBUG_RESET_ONBOARDING { return false }
-        #endif
         return UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
     }() {
         didSet { UserDefaults.standard.set(hasCompletedOnboarding, forKey: "hasCompletedOnboarding") }
