@@ -56,14 +56,6 @@ struct AnalyzingView: View {
                     Text("Estimating calories and macros")
                         .font(.subheadline)
                         .foregroundStyle(Theme.textSecondary)
-
-                    Label("Running on this device", systemImage: "lock.shield.fill")
-                        .font(.caption)
-                        .foregroundStyle(Theme.textSecondary)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(Theme.cardBackground)
-                        .clipShape(Capsule())
                 }
             }
             .padding()

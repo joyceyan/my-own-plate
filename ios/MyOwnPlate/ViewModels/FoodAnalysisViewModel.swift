@@ -92,9 +92,9 @@ final class FoodAnalysisViewModel {
         analysisError = nil
 
         do {
-            let (nutrition, raw) = try await modelService.analyze(image: image)
+            let (nutrition, description) = try await modelService.analyze(image: image)
             analysisResult = nutrition
-            foodDescription = "Meal"
+            foodDescription = description
             analysisPhase = .review
         } catch {
             analysisError = error.localizedDescription
