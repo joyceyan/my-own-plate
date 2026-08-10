@@ -15,6 +15,8 @@ struct AnalyzingView: View {
             }
             .padding(.vertical, 12)
 
+            Spacer()
+
             // Photo
             if let image = viewModel.selectedImage {
                 Image(uiImage: image)
