@@ -59,7 +59,7 @@ struct ContentView: View {
     private var customTabBar: some View {
         HStack {
             tabBarItem(icon: "house.fill", label: "Home", index: 0)
-            tabBarItem(icon: "chart.bar.fill", label: "Analytics", index: 1)
+            tabBarItem(icon: "clock.fill", label: "History", index: 1)
             tabBarItem(icon: "gearshape.fill", label: "Settings", index: 2)
 
             // + button

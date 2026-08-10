@@ -2,7 +2,6 @@ import SwiftUI
 
 struct HistoryView: View {
     @Environment(FoodAnalysisViewModel.self) var viewModel
-    @Environment(EntitlementService.self) var entitlements
     @State private var selectedRange = 0
     @State private var selectedMeal: Meal?
 
@@ -23,31 +22,12 @@ struct HistoryView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Analytics")
+            Text("History")
                 .font(.title2.weight(.bold))
                 .foregroundStyle(Theme.textPrimary)
                 .padding(.horizontal, 20)
                 .padding(.bottom, 12)
 
-            if entitlements.isPremium {
-                analyticsContent
-            } else {
-                lockedContent
-            }
-        }
-        .background(Theme.background)
-        .onAppear {
-            if !entitlements.isPremium {
-                entitlements.registerHistory { }
-            }
-        }
-        .fullScreenCover(item: $selectedMeal) { meal in
-            MealDetailView(meal: meal)
-        }
-    }
-
-    private var analyticsContent: some View {
-        VStack(alignment: .leading, spacing: 0) {
             Picker("Range", selection: $selectedRange) {
                 ForEach(0..<rangeLabels.count, id: \.self) { i in
                     Text(rangeLabels[i]).tag(i)
@@ -75,37 +55,10 @@ struct HistoryView: View {
                 }
             }
         }
-    }
-
-    private var lockedContent: some View {
-        VStack(spacing: 20) {
-            Spacer()
-            Image(systemName: "lock.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(Theme.textTertiary)
-            Text("Analytics is a Premium feature")
-                .font(.headline)
-                .foregroundStyle(Theme.textPrimary)
-            Text("Upgrade to Pro to view your meal history and trends.")
-                .font(.subheadline)
-                .foregroundStyle(Theme.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-            Button {
-                entitlements.registerHistory { }
-            } label: {
-                Text("Upgrade to Premium")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Theme.accent)
-                    .foregroundStyle(Theme.background)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-            }
-            .padding(.horizontal, 32)
-            Spacer()
+        .background(Theme.background)
+        .fullScreenCover(item: $selectedMeal) { meal in
+            MealDetailView(meal: meal)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func daySection(_ date: Date) -> some View {

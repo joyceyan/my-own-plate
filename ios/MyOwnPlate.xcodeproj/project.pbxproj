@@ -18,11 +18,9 @@
 		1B98C85C9130DECB6C3AE1CB /* ReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6905ABE74F580173BDCDE44F /* ReviewView.swift */; };
 		20C4088EAF4C984D56FBA2B3 /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = F7A1FEAD104FBFAF2299BBBF /* MLXLMCommon */; };
 		251852F5F5EC3161243A5EB3 /* MealStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDBA24EC58A3BB4768DD5308 /* MealStore.swift */; };
-		2B1EABF0CD98D7F8A7372CE5 /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = 7EC4BC2CA633A2D1F5AD650C /* Tokenizers */; };
-		2BC3368862072BCF4BDEB0F9 /* EntitlementService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0DFCA8D63F3B5E324C6067 /* EntitlementService.swift */; };
 		363E42F206A578A4AD83781F /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18E59B17DB30286C41B1DBB9 /* SplashView.swift */; };
 		3835448C581E2DEBB33C9FCA /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922DED27B44FB5042B8E0DF7 /* Keychain.swift */; };
-		3A77B9B8593B5C26EBDDA220 /* SuperwallKit in Frameworks */ = {isa = PBXBuildFile; productRef = 4492B9CCA51CEBF0E7E41889 /* SuperwallKit */; };
+		3A77B9B8593B5C26EBDDA220 /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = 7EC4BC2CA633A2D1F5AD650C /* Tokenizers */; };
 		463E51023DF2A8621338A4C8 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0381B2547A22A85144AC79D /* Theme.swift */; };
 		482FF1CCD9A7768DC3780A2F /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88027D4567247E68E05DDC83 /* TodayView.swift */; };
 		4F7C456A149334B179B586F8 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E7F592FD50D3AA4145DEF80 /* OnboardingView.swift */; };
@@ -42,7 +40,6 @@
 		9F969C5ACA11CC64494DDB3D /* BackendClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2062770C57E1B8031D59A14A /* BackendClient.swift */; };
 		AB097C0FCD09443869CCA704 /* NutritionResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0B584392CF5B63885A20704 /* NutritionResult.swift */; };
 		ADDF312A071C2C8BF184CAAC /* EditMealView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2332E2CE8FDEA3C8EED682FC /* EditMealView.swift */; };
-		B2A3B4621FE43831493B35F7 /* AccountSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8860D41D06AA150955E0E513 /* AccountSection.swift */; };
 		B4F59C0206ACFB061871AE38 /* MealDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AED1BF5A9635E5DF3C10D6F3 /* MealDetailView.swift */; };
 		C12C398EDFC29670DDF0E569 /* AnalysisFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD5C8A5C360DF944E6DDC484 /* AnalysisFlowView.swift */; };
 		C61275BE63413B532D2181FC /* Meal.swift in Sources */ = {isa = PBXBuildFile; fileRef = B58BE97EBAA4820B558CB959 /* Meal.swift */; };
@@ -67,14 +64,12 @@
 		49FAF104BEAAE4BEFC4058F4 /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
 		4B05B133F537D1596AEAD126 /* MyOwnPlateApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyOwnPlateApp.swift; sourceTree = "<group>"; };
 		5957A9C61978CAA0633465ED /* Model */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Model; path = MyOwnPlate/Resources/Model; sourceTree = SOURCE_ROOT; };
-		5E0DFCA8D63F3B5E324C6067 /* EntitlementService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementService.swift; sourceTree = "<group>"; };
 		66AF1431ABF8492B201B0CBA /* MockModelService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockModelService.swift; sourceTree = "<group>"; };
 		6905ABE74F580173BDCDE44F /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
 		8290B3FA955F8491368BCF20 /* GGUFModels */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GGUFModels; path = MyOwnPlate/Resources/GGUFModels; sourceTree = SOURCE_ROOT; };
 		868082787B31C75A9A7166F2 /* MLXModelService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLXModelService.swift; sourceTree = "<group>"; };
 		88027D4567247E68E05DDC83 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
 		88324CCB51B2372FC6CAC0FE /* MyOwnPlate.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = MyOwnPlate.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		8860D41D06AA150955E0E513 /* AccountSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSection.swift; sourceTree = "<group>"; };
 		9055960489E683125EAF4727 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		922DED27B44FB5042B8E0DF7 /* Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keychain.swift; sourceTree = "<group>"; };
 		9F44733AF6102F8BE1FE70AD /* AnalyzingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyzingView.swift; sourceTree = "<group>"; };
@@ -105,8 +100,7 @@
 				20C4088EAF4C984D56FBA2B3 /* MLXLMCommon in Frameworks */,
 				DB950A32CBBBC059280B90AA /* MLX in Frameworks */,
 				6B4073C51860B36781F76A44 /* MLXRandom in Frameworks */,
-				3A77B9B8593B5C26EBDDA220 /* SuperwallKit in Frameworks */,
-				2B1EABF0CD98D7F8A7372CE5 /* Tokenizers in Frameworks */,
+				3A77B9B8593B5C26EBDDA220 /* Tokenizers in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -174,7 +168,6 @@
 		C4C4F24CD5766AAFB3EA7DDB /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				8860D41D06AA150955E0E513 /* AccountSection.swift */,
 				CD5C8A5C360DF944E6DDC484 /* AnalysisFlowView.swift */,
 				9F44733AF6102F8BE1FE70AD /* AnalyzingView.swift */,
 				49FAF104BEAAE4BEFC4058F4 /* CameraView.swift */,
@@ -211,7 +204,6 @@
 			isa = PBXGroup;
 			children = (
 				2062770C57E1B8031D59A14A /* BackendClient.swift */,
-				5E0DFCA8D63F3B5E324C6067 /* EntitlementService.swift */,
 				922DED27B44FB5042B8E0DF7 /* Keychain.swift */,
 				868082787B31C75A9A7166F2 /* MLXModelService.swift */,
 				66AF1431ABF8492B201B0CBA /* MockModelService.swift */,
@@ -244,7 +236,6 @@
 				F7A1FEAD104FBFAF2299BBBF /* MLXLMCommon */,
 				7474F85E27DBF76C5F711BF1 /* MLX */,
 				9D10CC4EC86D3BE710B49FAA /* MLXRandom */,
-				4492B9CCA51CEBF0E7E41889 /* SuperwallKit */,
 				7EC4BC2CA633A2D1F5AD650C /* Tokenizers */,
 			);
 			productName = MyOwnPlate;
@@ -278,7 +269,6 @@
 				F387460D442503817E85D9A5 /* XCRemoteSwiftPackageReference "llama.swift" */,
 				9D416E2B162EDA5A5129CE9C /* XCRemoteSwiftPackageReference "mlx-swift" */,
 				E55530FDA78606FB438DC7F9 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
-				2EC7883CEC033C78586CEB34 /* XCRemoteSwiftPackageReference "Superwall-iOS" */,
 				C452DC7FEF7AA1053F54DF61 /* XCRemoteSwiftPackageReference "swift-transformers" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -309,7 +299,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B2A3B4621FE43831493B35F7 /* AccountSection.swift in Sources */,
 				C12C398EDFC29670DDF0E569 /* AnalysisFlowView.swift in Sources */,
 				146C1DE36F97BD1B664F2081 /* AnalyzingView.swift in Sources */,
 				9F969C5ACA11CC64494DDB3D /* BackendClient.swift in Sources */,
@@ -317,7 +306,6 @@
 				69C49505B8830F325998CAED /* ContentView.swift in Sources */,
 				1A8AEEF457D40DDAECBDD1E7 /* DailyGoal.swift in Sources */,
 				ADDF312A071C2C8BF184CAAC /* EditMealView.swift in Sources */,
-				2BC3368862072BCF4BDEB0F9 /* EntitlementService.swift in Sources */,
 				593C68F45D764FD2E92FC2AB /* FoodAnalysisViewModel.swift in Sources */,
 				0E6420E988ADAA1876A8D7BC /* HistoryView.swift in Sources */,
 				3835448C581E2DEBB33C9FCA /* Keychain.swift in Sources */,
@@ -532,14 +520,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		2EC7883CEC033C78586CEB34 /* XCRemoteSwiftPackageReference "Superwall-iOS" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/superwall/Superwall-iOS";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 4.16.1;
-			};
-		};
 		9D416E2B162EDA5A5129CE9C /* XCRemoteSwiftPackageReference "mlx-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/ml-explore/mlx-swift";
@@ -584,11 +564,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = F387460D442503817E85D9A5 /* XCRemoteSwiftPackageReference "llama.swift" */;
 			productName = LlamaSwift;
-		};
-		4492B9CCA51CEBF0E7E41889 /* SuperwallKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 2EC7883CEC033C78586CEB34 /* XCRemoteSwiftPackageReference "Superwall-iOS" */;
-			productName = SuperwallKit;
 		};
 		7474F85E27DBF76C5F711BF1 /* MLX */ = {
 			isa = XCSwiftPackageProductDependency;

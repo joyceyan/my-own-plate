@@ -2,7 +2,6 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(FoodAnalysisViewModel.self) var viewModel
-    @Environment(EntitlementService.self) var entitlements
 
     @State private var editingSection: EditingSection?
     @State private var showRecalculate = false
@@ -45,8 +44,6 @@ struct SettingsView: View {
                 Text("Settings")
                     .font(.title2.weight(.bold))
                     .foregroundStyle(Theme.textPrimary)
-
-                AccountSection()
 
                 personalSection
                 bodySection
