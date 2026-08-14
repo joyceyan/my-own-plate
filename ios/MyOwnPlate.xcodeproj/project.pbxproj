@@ -32,6 +32,7 @@
 		8C5F51324E5BF466681923EF /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49FAF104BEAAE4BEFC4058F4 /* CameraView.swift */; };
 		91051C3CABE54568D8E9159E /* ManualEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFC4C35C0B03B13CFCEF8098 /* ManualEntryView.swift */; };
 		98FD66D2818F80541B81AF8B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9055960489E683125EAF4727 /* Assets.xcassets */; };
+		9A770C64B5EC60BE6504C193 /* ModelDownloadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5023AEFD02E4CBAF336CBC75 /* ModelDownloadService.swift */; };
 		AB097C0FCD09443869CCA704 /* NutritionResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0B584392CF5B63885A20704 /* NutritionResult.swift */; };
 		ADDF312A071C2C8BF184CAAC /* EditMealView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2332E2CE8FDEA3C8EED682FC /* EditMealView.swift */; };
 		B4F59C0206ACFB061871AE38 /* MealDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AED1BF5A9635E5DF3C10D6F3 /* MealDetailView.swift */; };
@@ -51,6 +52,7 @@
 		432A82AE5D0941C93D7F4C17 /* RecalculatePlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecalculatePlanView.swift; sourceTree = "<group>"; };
 		49FAF104BEAAE4BEFC4058F4 /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
 		4B05B133F537D1596AEAD126 /* MyOwnPlateApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyOwnPlateApp.swift; sourceTree = "<group>"; };
+		5023AEFD02E4CBAF336CBC75 /* ModelDownloadService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelDownloadService.swift; sourceTree = "<group>"; };
 		66AF1431ABF8492B201B0CBA /* MockModelService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockModelService.swift; sourceTree = "<group>"; };
 		6905ABE74F580173BDCDE44F /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
 		8290B3FA955F8491368BCF20 /* GGUFModels */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GGUFModels; path = MyOwnPlate/Resources/GGUFModels; sourceTree = SOURCE_ROOT; };
@@ -183,6 +185,7 @@
 			isa = PBXGroup;
 			children = (
 				66AF1431ABF8492B201B0CBA /* MockModelService.swift */,
+				5023AEFD02E4CBAF336CBC75 /* ModelDownloadService.swift */,
 				0323B436489E8DD5069C13E1 /* ModelService.swift */,
 				F2EB62F3C24E28912E2BB2A9 /* RunAnywhereModelService.swift */,
 			);
@@ -278,6 +281,7 @@
 				B4F59C0206ACFB061871AE38 /* MealDetailView.swift in Sources */,
 				251852F5F5EC3161243A5EB3 /* MealStore.swift in Sources */,
 				1730245587FB9A443EF48B84 /* MockModelService.swift in Sources */,
+				9A770C64B5EC60BE6504C193 /* ModelDownloadService.swift in Sources */,
 				53EE51351955E111251F2A64 /* ModelLoadingView.swift in Sources */,
 				070887D901C9EC5D0D33A465 /* ModelService.swift in Sources */,
 				59BC0758EBE67BB9B0C286E0 /* MyOwnPlateApp.swift in Sources */,

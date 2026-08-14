@@ -27,10 +27,12 @@ targets:
     info:
       path: MyOwnPlate/Resources/Info.plist
       properties:
+        CFBundleShortVersionString: "1.0.0"
+        ITSAppUsesNonExemptEncryption: false
         NSCameraUsageDescription: "MyOwnPlate needs camera access to photograph your food for nutritional analysis."
         NSPhotoLibraryUsageDescription: "MyOwnPlate needs photo library access so you can select food photos for nutritional analysis."
         UILaunchScreen:
-          UIColorName: ""
+          UIColorName: "LaunchBackground"
     dependencies:
       - package: llama-swift
         product: LlamaSwift

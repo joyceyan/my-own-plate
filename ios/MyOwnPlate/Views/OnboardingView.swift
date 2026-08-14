@@ -39,8 +39,11 @@ struct OnboardingView: View {
     @State private var planFat = ""
     @State private var planCarbs = ""
 
+    // Final disclaimer
+    @State private var isLoadingModel = false
+
     private enum Step {
-        case name, goal, gender, body, targetWeight, birthday, activity, plan
+        case name, goal, gender, body, targetWeight, birthday, activity, plan, disclaimer
     }
 
     private var steps: [Step] {
@@ -48,7 +51,7 @@ struct OnboardingView: View {
         if selectedGoal == .lose || selectedGoal == .gain {
             s.append(.targetWeight)
         }
-        s.append(contentsOf: [.birthday, .activity, .plan])
+        s.append(contentsOf: [.birthday, .activity, .plan, .disclaimer])
         return s
     }
 
@@ -65,6 +68,7 @@ struct OnboardingView: View {
         case .birthday: birthday <= maxBirthday
         case .activity: selectedActivity != nil
         case .plan: Double(planCalories) != nil && Double(planProtein) != nil && Double(planFat) != nil && Double(planCarbs) != nil
+        case .disclaimer: true
         }
     }
 
@@ -122,6 +126,20 @@ struct OnboardingView: View {
         Calendar.current.date(byAdding: .year, value: -13, to: Date()) ?? Date()
     }
 
+    private var buttonTitle: String {
+        switch currentStep {
+        case .disclaimer: "Get Started"
+        case .plan: "Continue"
+        default: "Continue"
+        }
+    }
+
+    private var buttonEnabled: Bool {
+        if isLoadingModel { return false }
+        if currentStep == .disclaimer { return true }
+        return canContinue
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Nav + Progress bar
@@ -153,6 +171,7 @@ struct OnboardingView: View {
                 case .birthday: birthdayStep
                 case .activity: activityStep
                 case .plan: planStep
+                case .disclaimer: disclaimerStep
                 }
             }
 
@@ -160,17 +179,21 @@ struct OnboardingView: View {
 
             // Continue button
             Button {
-                advance()
+                if currentStep == .disclaimer {
+                    Task { await agreeAndStart() }
+                } else {
+                    advance()
+                }
             } label: {
-                Text(currentStep == .plan ? "Get Started" : "Continue")
+                Text(buttonTitle)
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(canContinue ? Color.white : Color.white.opacity(0.3))
+                    .background(buttonEnabled ? Color.white : Color.white.opacity(0.3))
                     .foregroundStyle(Theme.background)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
             }
-            .disabled(!canContinue)
+            .disabled(!buttonEnabled)
             .padding(.horizontal, 20)
             .padding(.bottom, 32)
         }
@@ -452,6 +475,62 @@ struct OnboardingView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
+    // MARK: - Disclaimer
+
+    private var disclaimerStep: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            questionHeader(
+                title: "Before you start",
+                subtitle: "Please review the important information below"
+            )
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Medical disclaimer")
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+
+                    Text("MyOwnPlate uses on-device AI to estimate calories and macronutrients from photos. These estimates are for informational purposes only and are not medical advice, a diagnosis, or a personalised diet plan. Always consult a qualified healthcare professional or registered dietitian before making significant changes to your diet, exercise, or treatment.")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("Privacy")
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+
+                    Text("Your data stays on this device. Photos, meal history, and profile information are stored locally and are not uploaded to our servers. The AI model runs entirely on your iPhone.")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.horizontal, 20)
+            }
+
+            if isLoadingModel {
+                HStack(spacing: 12) {
+                    ProgressView()
+                        .tint(.white)
+                    Text("Loading model…")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                .padding(.horizontal, 20)
+            }
+        }
+    }
+
+    private func agreeAndStart() async {
+        isLoadingModel = true
+        await viewModel.loadModel()
+        isLoadingModel = false
+
+        if viewModel.modelError == nil {
+            viewModel.hasCompletedOnboarding = true
+            viewModel.showOnboarding = false
+        }
+    }
+
     // MARK: - Shared components
 
     private func questionHeader(title: String, subtitle: String?) -> some View {
@@ -539,9 +618,7 @@ struct OnboardingView: View {
                 carbs: Double(planCarbs) ?? 250
             )
             viewModel.mealStore.dailyGoal = goals
-
-            viewModel.hasCompletedOnboarding = true
-            viewModel.showOnboarding = false
+        case .disclaimer:
             return
         }
         withAnimation { stepIndex += 1 }

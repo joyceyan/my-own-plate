@@ -12,7 +12,9 @@ struct MyOwnPlateApp: App {
                     #if DEBUG
                     viewModel.mealStore.loadSampleDataIfEmpty()
                     #endif
-                    await viewModel.loadModel()
+                    if viewModel.hasCompletedOnboarding {
+                        await viewModel.loadModel()
+                    }
                 }
         }
     }

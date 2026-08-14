@@ -2,7 +2,6 @@ import Foundation
 
 struct UserProfile: Codable, Equatable {
     var name: String
-    var phone: String
     var birthday: Date?
     var sex: Sex
     var heightCm: Double?
@@ -33,7 +32,6 @@ struct UserProfile: Codable, Equatable {
 
     static let `default` = UserProfile(
         name: "",
-        phone: "",
         birthday: nil,
         sex: .other,
         heightCm: nil,

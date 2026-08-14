@@ -83,7 +83,7 @@ final class LlamaCppModelService: ModelService, @unchecked Sendable {
     }
 
     func analyze(image: UIImage) async throws -> (NutritionResult, String) {
-        guard let model, let context, let mtmdCtx, let sampler else {
+        guard mtmdCtx != nil, sampler != nil else {
             throw ModelServiceError.modelNotLoaded
         }
 
@@ -133,7 +133,9 @@ final class LlamaCppModelService: ModelService, @unchecked Sendable {
 
         let marker = String(cString: mtmd_get_marker(mtmdCtx))
         let promptStr = "<|im_start|>user\n\(marker)\(prompt)<|im_end|>\n<|im_start|>assistant\n"
-        let cPrompt = strdup(promptStr)!
+        guard let cPrompt = strdup(promptStr) else {
+            throw ModelServiceError.modelNotLoaded
+        }
         defer { free(cPrompt) }
 
         var textInput = mtmd_input_text()
@@ -181,12 +183,15 @@ final class LlamaCppModelService: ModelService, @unchecked Sendable {
             var buf = [CChar](repeating: 0, count: 256)
             let len = llama_token_to_piece(vocab, token, &buf, Int32(buf.count), 0, true)
             if len > 0 {
-                buf[Int(len)] = 0
-                output += String(cString: buf)
+                let piece = buf.withUnsafeBytes { raw -> String in
+                    let bytes = raw.bindMemory(to: UInt8.self)
+                    return String(decoding: UnsafeBufferPointer(start: bytes.baseAddress, count: Int(len)), as: UTF8.self)
+                }
+                output += piece
             }
 
             var tokenCopy = token
-            var batch = llama_batch_get_one(&tokenCopy, 1)
+            let batch = llama_batch_get_one(&tokenCopy, 1)
             let decodeResult = llama_decode(context, batch)
             if decodeResult != 0 {
                 break
@@ -198,12 +203,23 @@ final class LlamaCppModelService: ModelService, @unchecked Sendable {
 
     // MARK: - Image Conversion
 
-    /// Convert UIImage to a flat RGB byte array at the given size.
+    /// Returns a copy of the image drawn in the upright orientation.
+    private func normalizedImage(_ image: UIImage) -> UIImage {
+        guard image.imageOrientation != .up else { return image }
+        UIGraphicsBeginImageContextWithOptions(image.size, false, image.scale)
+        image.draw(in: CGRect(origin: .zero, size: image.size))
+        defer { UIGraphicsEndImageContext() }
+        return UIGraphicsGetImageFromCurrentImageContext() ?? image
+    }
+
+    /// Convert UIImage to a flat RGB byte array at the given size, respecting EXIF orientation.
     private func imageToRGB(_ image: UIImage, size: Int) throws -> [UInt8] {
+        let normalized = normalizedImage(image)
+
         // Resize
         let targetSize = CGSize(width: size, height: size)
         UIGraphicsBeginImageContextWithOptions(targetSize, true, 1.0)
-        image.draw(in: CGRect(origin: .zero, size: targetSize))
+        normalized.draw(in: CGRect(origin: .zero, size: targetSize))
         guard let resized = UIGraphicsGetImageFromCurrentImageContext() else {
             UIGraphicsEndImageContext()
             throw ModelServiceError.imageEncodingFailed

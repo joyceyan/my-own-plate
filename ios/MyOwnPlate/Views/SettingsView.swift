@@ -8,7 +8,6 @@ struct SettingsView: View {
 
     // Personal info edit state
     @State private var editName = ""
-    @State private var editPhone = ""
     @State private var editBirthday: Date = Date()
     @State private var hasBirthday = false
     @State private var editSex: UserProfile.Sex = .other
@@ -329,7 +328,6 @@ struct SettingsView: View {
         switch section {
         case .personal:
             editName = profile.name
-            editPhone = profile.phone
             if let bday = profile.birthday {
                 editBirthday = bday
                 hasBirthday = true
@@ -367,7 +365,6 @@ struct SettingsView: View {
 
     private func savePersonal() {
         viewModel.userProfile.name = editName
-        viewModel.userProfile.phone = editPhone
         viewModel.userProfile.birthday = hasBirthday ? min(editBirthday, maxBirthday) : nil
         viewModel.userProfile.sex = editSex
         editingSection = nil

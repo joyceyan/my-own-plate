@@ -12,6 +12,7 @@ enum AnalysisPhase {
 @Observable
 final class FoodAnalysisViewModel {
     let modelService: any ModelService
+    let modelDownloadService = ModelDownloadService()
     let mealStore = MealStore()
     var userProfile: UserProfile = UserProfile.load() {
         didSet { userProfile.save() }
@@ -25,6 +26,10 @@ final class FoodAnalysisViewModel {
 
     var modelReady = false
     var modelError: String?
+
+    // First-launch model download state
+    var modelDownloadProgress: Double = 0
+    var modelDownloadError: String?
 
     // Analysis flow state
     var showNewEntry = false
@@ -46,11 +51,34 @@ final class FoodAnalysisViewModel {
         #if targetEnvironment(simulator)
         modelReady = true
         #else
+        modelError = nil
         do {
             try await modelService.loadModel()
             modelReady = true
         } catch {
             modelError = error.localizedDescription
+        }
+        #endif
+    }
+
+    /// Downloads the on-device model files if they are not already present.
+    /// On the simulator this is a no-op.
+    func downloadModel() async {
+        #if targetEnvironment(simulator)
+        modelDownloadProgress = 1.0
+        modelDownloadError = nil
+        return
+        #else
+        modelDownloadError = nil
+        modelDownloadProgress = 0
+        do {
+            try await modelDownloadService.downloadIfNeeded { [weak self] progress in
+                Task { @MainActor [weak self] in
+                    self?.modelDownloadProgress = progress
+                }
+            }
+        } catch {
+            modelDownloadError = error.localizedDescription
         }
         #endif
     }
