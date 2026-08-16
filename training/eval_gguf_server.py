@@ -135,7 +135,8 @@ def main():
     print(f"Model: GGUF Q4_K_M + mmproj F16")
     print()
 
-    errors = {n: [] for n in NUTRIENTS}
+    abs_errors = {n: [] for n in NUTRIENTS}
+    gt_values = {n: [] for n in NUTRIENTS}
     parse_failures = 0
     start_time = time.time()
 
@@ -157,36 +158,39 @@ def main():
 
         for n in NUTRIENTS:
             if expected[n] > 0:
-                err = abs(pred[n] - expected[n]) / expected[n] * 100
-                errors[n].append(err)
+                abs_errors[n].append(abs(pred[n] - expected[n]))
+                gt_values[n].append(expected[n])
 
         if (i + 1) % 25 == 0:
             elapsed = time.time() - start_time
-            avg = np.mean([np.mean(errors[n]) for n in NUTRIENTS if errors[n]])
+            # Running MAE/mean
+            mm = [np.mean(abs_errors[n]) / np.mean(gt_values[n]) * 100
+                  for n in NUTRIENTS if abs_errors[n]]
+            avg = np.mean(mm) if mm else float("nan")
             rate = (i + 1) / elapsed
             eta = (len(samples) - i - 1) / rate
-            print(f"  [{i+1}/{len(samples)}] avg MAE%: {avg:.1f}% ({rate:.1f} samples/s, ETA {eta:.0f}s)")
+            print(f"  [{i+1}/{len(samples)}] avg MAE/mean: {avg:.1f}% ({rate:.1f} samples/s, ETA {eta:.0f}s)")
 
     elapsed = time.time() - start_time
     print(f"\n{'='*60}")
-    print(f"GGUF Q4_K_M Results — {args.mode} set ({len(samples)} samples)")
+    print(f"GGUF Results — {args.mode} set ({len(samples)} samples)")
     print(f"Parse failures: {parse_failures}/{len(samples)}")
     print(f"Time: {elapsed:.0f}s ({len(samples)/elapsed:.1f} samples/s)")
     print(f"{'='*60}")
 
-    total = []
+    print(f"\n  MAE/mean (paper metric):")
+    mm_total = []
     for n in NUTRIENTS:
-        mae = np.mean(errors[n]) if errors[n] else float("nan")
-        print(f"  {n:10s}: {mae:.1f}%")
-        total.append(mae)
-    avg = np.mean(total)
-    print(f"  {'avg':10s}: {avg:.1f}%")
-
-    print(f"\nComparison:")
-    print(f"  N5k baseline (Thames):  30.4%")
-    print(f"  Qwen3-VL-2B base:       59.2%")
-    print(f"  Fine-tuned bf16:        18.8%")
-    print(f"  Fine-tuned GGUF Q4_K_M: {avg:.1f}%")
+        if abs_errors[n]:
+            mae = np.mean(abs_errors[n])
+            gt_mean = np.mean(gt_values[n])
+            mm_pct = mae / gt_mean * 100
+        else:
+            mm_pct = float("nan")
+        print(f"    {n:10s}: {mm_pct:.1f}%")
+        mm_total.append(mm_pct)
+    mm_avg = np.mean(mm_total)
+    print(f"    {'avg':10s}: {mm_avg:.1f}%")
 
 
 if __name__ == "__main__":

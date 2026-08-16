@@ -142,8 +142,9 @@ def compute_metrics(ground_truths, predictions, parse_failed_flags):
 
 def load_model(model_path: str, adapter_dir: str, vision_lora_path: str,
                image_size: int = 384, vision_rank: int = 32, vision_alpha: int = 32,
-               projector_rank: int = 64, projector_alpha: int = 64):
-    """Load base model, apply custom vision LoRA, load PEFT adapter and vision LoRA weights."""
+               projector_rank: int = 64, projector_alpha: int = 64,
+               no_adapter: bool = False):
+    """Load base model, optionally apply LoRA adapters."""
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
     print(f"Using device: {device}")
 
@@ -159,11 +160,12 @@ def load_model(model_path: str, adapter_dir: str, vision_lora_path: str,
         device_map=device,
     )
 
-    apply_vision_block_lora(model, r=vision_rank, alpha=vision_alpha, dropout=0.0)
-    apply_projector_lora(model, r=projector_rank, alpha=projector_alpha, dropout=0.0)
+    if not no_adapter:
+        apply_vision_block_lora(model, r=vision_rank, alpha=vision_alpha, dropout=0.0)
+        apply_projector_lora(model, r=projector_rank, alpha=projector_alpha, dropout=0.0)
 
-    model = PeftModel.from_pretrained(model, adapter_dir)
-    load_custom_lora(model, vision_lora_path)
+        model = PeftModel.from_pretrained(model, adapter_dir)
+        load_custom_lora(model, vision_lora_path)
 
     model.eval()
     return model, processor
@@ -245,6 +247,8 @@ def parse_args():
     parser.add_argument("--lora-rank-projector", type=int, default=64)
     parser.add_argument("--lora-alpha-projector", type=int, default=64)
     parser.add_argument("--max-samples", type=int, default=None)
+    parser.add_argument("--no-adapter", action="store_true",
+                        help="Evaluate base model without any adapter/LoRA")
     return parser.parse_args()
 
 
@@ -272,6 +276,7 @@ def main():
         vision_alpha=args.lora_alpha_vision,
         projector_rank=args.lora_rank_projector,
         projector_alpha=args.lora_alpha_projector,
+        no_adapter=args.no_adapter,
     )
 
     print("\nRunning inference...")

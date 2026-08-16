@@ -1,28 +1,28 @@
 {
-  "timestamp": "2026-08-09T13:50:34.197804+00:00",
+  "timestamp": "2026-08-15T06:54:33.209533+00:00",
   "mode": "val",
-  "model": "training/cache/Qwen3-VL-2B-Instruct",
+  "model": "/Users/jyan/src/my-own-plate/training/cache/Qwen3-VL-2B-Instruct",
   "adapter_dir": "/Users/jyan/src/my-own-plate/training/output/adapter",
   "vision_lora": "/Users/jyan/src/my-own-plate/training/output/vision_lora.pt",
-  "total_samples": 349,
-  "parse_failures": 3,
+  "total_samples": 50,
+  "parse_failures": 0,
   "metrics": {
     "calories": {
-      "mae_pct": 17.9,
-      "std_pct": 24.6
+      "mae_pct": 226.1,
+      "std_pct": 541.7
     },
     "protein": {
-      "mae_pct": 23.2,
-      "std_pct": 45.2
+      "mae_pct": 115.8,
+      "std_pct": 136.1
     },
     "fat": {
-      "mae_pct": 33.7,
-      "std_pct": 86.2
+      "mae_pct": 774.0,
+      "std_pct": 2965.0
     },
     "carbs": {
-      "mae_pct": 23.0,
-      "std_pct": 30.6
+      "mae_pct": 397.0,
+      "std_pct": 904.9
     }
   },
-  "avg_mae_pct": 24.4
+  "avg_mae_pct": 378.2
 }
