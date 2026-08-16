@@ -27,7 +27,7 @@
 		69C49505B8830F325998CAED /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5C189056E2F8F5F0EAE7005 /* ContentView.swift */; };
 		6C9B28D537465C520F89222F /* PhotoPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146F19E26985EC7AEB90565B /* PhotoPickerView.swift */; };
 		7CBEFFBCAC6D379C693ADEE4 /* UserProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8E86E7988BFC5D75B7130FD /* UserProfile.swift */; };
-		83222192AD9A7E92E10F1A89 /* RunAnywhereModelService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2EB62F3C24E28912E2BB2A9 /* RunAnywhereModelService.swift */; };
+		83222192AD9A7E92E10F1A89 /* LlamaCppModelService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2EB62F3C24E28912E2BB2A9 /* LlamaCppModelService.swift */; };
 		880A43A97348B358759F9EE2 /* RecalculatePlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 432A82AE5D0941C93D7F4C17 /* RecalculatePlanView.swift */; };
 		8C5F51324E5BF466681923EF /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49FAF104BEAAE4BEFC4058F4 /* CameraView.swift */; };
 		91051C3CABE54568D8E9159E /* ManualEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFC4C35C0B03B13CFCEF8098 /* ManualEntryView.swift */; };
@@ -73,7 +73,7 @@
 		E5C189056E2F8F5F0EAE7005 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		EB915DF8B801950C00AA3A33 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		F0B584392CF5B63885A20704 /* NutritionResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionResult.swift; sourceTree = "<group>"; };
-		F2EB62F3C24E28912E2BB2A9 /* RunAnywhereModelService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunAnywhereModelService.swift; sourceTree = "<group>"; };
+		F2EB62F3C24E28912E2BB2A9 /* LlamaCppModelService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LlamaCppModelService.swift; sourceTree = "<group>"; };
 		FDBA24EC58A3BB4768DD5308 /* MealStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -187,7 +187,7 @@
 				66AF1431ABF8492B201B0CBA /* MockModelService.swift */,
 				5023AEFD02E4CBAF336CBC75 /* ModelDownloadService.swift */,
 				0323B436489E8DD5069C13E1 /* ModelService.swift */,
-				F2EB62F3C24E28912E2BB2A9 /* RunAnywhereModelService.swift */,
+				F2EB62F3C24E28912E2BB2A9 /* LlamaCppModelService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -291,7 +291,7 @@
 				6C9B28D537465C520F89222F /* PhotoPickerView.swift in Sources */,
 				880A43A97348B358759F9EE2 /* RecalculatePlanView.swift in Sources */,
 				1B98C85C9130DECB6C3AE1CB /* ReviewView.swift in Sources */,
-				83222192AD9A7E92E10F1A89 /* RunAnywhereModelService.swift in Sources */,
+				83222192AD9A7E92E10F1A89 /* LlamaCppModelService.swift in Sources */,
 				09616FAFE244181EB745A457 /* SettingsView.swift in Sources */,
 				363E42F206A578A4AD83781F /* SplashView.swift in Sources */,
 				463E51023DF2A8621338A4C8 /* Theme.swift in Sources */,

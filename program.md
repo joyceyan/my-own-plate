@@ -2,7 +2,7 @@
 
 ## Goal
 
-Minimize the MAE% (mean absolute error as percentage of ground-truth mean) of the fine-tuned Qwen3-VL-2B model on the Nutrition5k validation set across four nutrients: calories, protein, fat, and carbs. The target is to match or beat the legacy MLX result (18.1% avg) — and critically, produce a model that survives export to GGUF without degradation, so it can run on-device via llama.cpp / RunAnywhere SDK.
+Minimize the MAE% (mean absolute error as percentage of ground-truth mean) of the fine-tuned Qwen3-VL-2B model on the Nutrition5k validation set across four nutrients: calories, protein, fat, and carbs. The target is to match or beat the legacy MLX result (18.1% avg) — and critically, produce a model that survives export to GGUF without degradation, so it can run on-device via llama.cpp.
 
 ## Setup
 

@@ -1,0 +1,262 @@
+import Foundation
+import LlamaSwift
+import UIKit
+
+/// Prompt for food description (second inference pass).
+private let kDescriptionPrompt = """
+Generate a concise, neutral name for this meal based on the image. Use at most six words. \
+Capitalize only the first word and use lowercase for the rest. Do not use any punctuation. \
+Focus on visible ingredients and the kind of meal. Avoid opinion words, portion words, and value judgments.
+Good examples: "Yogurt with berries", "Cheese pizza", "Noodles with meat and vegetables", "Steak with vegetables".
+Bad examples: "massive pizza feast", "yummy noodles!", "small anorexic bite of cake".
+"""
+
+/// On-device VLM inference using llama.cpp via the LlamaSwift package.
+/// Loads a two-file GGUF model (language model + vision projector) from the app bundle.
+final class LlamaCppModelService: ModelService, @unchecked Sendable {
+
+    private var model: OpaquePointer?                          // llama_model *
+    private var context: OpaquePointer?                        // llama_context *
+    private var mtmdCtx: OpaquePointer?                        // mtmd_context *
+    private var sampler: UnsafeMutablePointer<llama_sampler>?
+
+    deinit {
+        if let sampler { llama_sampler_free(sampler) }
+        if let mtmdCtx { mtmd_free(mtmdCtx) }
+        if let context { llama_free(context) }
+        if let model { llama_model_free(model) }
+        llama_backend_free()
+    }
+
+    @MainActor
+    func loadModel() async throws {
+        guard model == nil else { return }
+
+        llama_backend_init()
+
+        // Locate GGUF files in app bundle
+        guard let modelsDir = Bundle.main.url(forResource: "GGUFModels", withExtension: nil) else {
+            throw ModelServiceError.modelNotFound
+        }
+        let modelPath = modelsDir.appendingPathComponent("myownplate-q4km.gguf").path
+        let mmprojPath = modelsDir.appendingPathComponent("mmproj-myownplate-f16.gguf").path
+
+        guard FileManager.default.fileExists(atPath: modelPath),
+              FileManager.default.fileExists(atPath: mmprojPath) else {
+            throw ModelServiceError.modelNotFound
+        }
+
+        // Load language model
+        var modelParams = llama_model_default_params()
+        modelParams.n_gpu_layers = 99  // offload all layers to Metal GPU
+        guard let loadedModel = llama_model_load_from_file(modelPath, modelParams) else {
+            throw ModelServiceError.modelNotFound
+        }
+        self.model = loadedModel
+
+        // Create context
+        var ctxParams = llama_context_default_params()
+        ctxParams.n_ctx = 2048
+        ctxParams.n_batch = 512
+        ctxParams.n_threads = 4
+        guard let ctx = llama_init_from_model(loadedModel, ctxParams) else {
+            throw ModelServiceError.modelNotLoaded
+        }
+        self.context = ctx
+
+        // Load multimodal projector
+        var mtmdParams = mtmd_context_params_default()
+        mtmdParams.use_gpu = true
+        mtmdParams.n_threads = 4
+        guard let mctx = mtmd_init_from_file(mmprojPath, loadedModel, mtmdParams) else {
+            throw ModelServiceError.modelNotFound
+        }
+        self.mtmdCtx = mctx
+
+        // Set up sampler (greedy / temperature 0)
+        let samplerParams = llama_sampler_chain_default_params()
+        guard let chain = llama_sampler_chain_init(samplerParams) else {
+            throw ModelServiceError.modelNotLoaded
+        }
+        llama_sampler_chain_add(chain, llama_sampler_init_greedy())
+        self.sampler = chain
+    }
+
+    func analyze(image: UIImage) async throws -> (NutritionResult, String) {
+        guard mtmdCtx != nil, sampler != nil else {
+            throw ModelServiceError.modelNotLoaded
+        }
+
+        // Convert UIImage to RGB pixel data
+        let rgbData = try imageToRGB(image, size: 384)
+
+        // Create mtmd bitmap — rgbData must stay alive until we're done with both calls
+        guard let bitmap = mtmd_bitmap_init(384, 384, rgbData) else {
+            throw ModelServiceError.imageEncodingFailed
+        }
+        defer { mtmd_bitmap_free(bitmap) }
+
+        // First call: nutrition estimation
+        let nutritionRaw = try runInference(prompt: kNutritionPrompt, bitmap: bitmap, maxTokens: 512)
+        let nutrition = try parseNutritionResult(from: nutritionRaw)
+
+        // Second call: food description
+        let description = try runInference(prompt: kDescriptionPrompt, bitmap: bitmap, maxTokens: 128)
+
+        return (nutrition, Self.cleanFoodDescription(description))
+    }
+
+    /// Strip markdown, quotes, punctuation and capitalize the first letter.
+    private static func cleanFoodDescription(_ raw: String) -> String {
+        var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Remove surrounding quotes
+        if s.hasPrefix("\"") && s.hasSuffix("\"") { s = String(s.dropFirst().dropLast()) }
+        // Remove markdown bold
+        s = s.replacingOccurrences(of: "**", with: "")
+        // Strip punctuation from the end
+        while let last = s.last, last.isPunctuation { s = String(s.dropLast()) }
+        // Trim again
+        s = s.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Capitalize first letter
+        if let first = s.first, !first.isUppercase {
+            s = first.uppercased() + s.dropFirst()
+        }
+        return s.isEmpty ? "Meal" : s
+    }
+
+    // MARK: - Single Inference Pass
+
+    private func runInference(prompt: String, bitmap: OpaquePointer, maxTokens: Int32) throws -> String {
+        guard let model, let context, let mtmdCtx, let sampler else {
+            throw ModelServiceError.modelNotLoaded
+        }
+
+        let marker = String(cString: mtmd_get_marker(mtmdCtx))
+        let promptStr = "<|im_start|>user\n\(marker)\(prompt)<|im_end|>\n<|im_start|>assistant\n"
+        guard let cPrompt = strdup(promptStr) else {
+            throw ModelServiceError.modelNotLoaded
+        }
+        defer { free(cPrompt) }
+
+        var textInput = mtmd_input_text()
+        textInput.text = UnsafePointer(cPrompt)
+        textInput.text_len = strlen(cPrompt)
+        textInput.add_special = true
+        textInput.parse_special = true
+
+        guard let chunks = mtmd_input_chunks_init() else {
+            throw ModelServiceError.imageEncodingFailed
+        }
+        defer { mtmd_input_chunks_free(chunks) }
+
+        var bitmapPtr: OpaquePointer? = bitmap
+        let tokenizeResult = mtmd_tokenize(mtmdCtx, chunks, &textInput, &bitmapPtr, 1)
+        guard tokenizeResult == 0 else {
+            throw ModelServiceError.parseFailed(raw: "mtmd_tokenize failed with code \(tokenizeResult)")
+        }
+
+        let memory = llama_get_memory(context)
+        llama_memory_clear(memory, true)
+
+        var nPast: Int32 = 0
+        let evalResult = mtmd_helper_eval_chunks(
+            mtmdCtx, context, chunks,
+            0, 0,
+            Int32(llama_n_batch(context)),
+            true,
+            &nPast
+        )
+        guard evalResult == 0 else {
+            throw ModelServiceError.parseFailed(raw: "mtmd_helper_eval_chunks failed with code \(evalResult)")
+        }
+
+        let vocab = llama_model_get_vocab(model)
+        var output = ""
+
+        for _ in 0..<maxTokens {
+            let token = llama_sampler_sample(sampler, context, -1)
+
+            if llama_vocab_is_eog(vocab, token) {
+                break
+            }
+
+            var buf = [CChar](repeating: 0, count: 256)
+            let len = llama_token_to_piece(vocab, token, &buf, Int32(buf.count), 0, true)
+            if len > 0 {
+                let piece = buf.withUnsafeBytes { raw -> String in
+                    let bytes = raw.bindMemory(to: UInt8.self)
+                    return String(decoding: UnsafeBufferPointer(start: bytes.baseAddress, count: Int(len)), as: UTF8.self)
+                }
+                output += piece
+            }
+
+            var tokenCopy = token
+            let batch = llama_batch_get_one(&tokenCopy, 1)
+            let decodeResult = llama_decode(context, batch)
+            if decodeResult != 0 {
+                break
+            }
+        }
+
+        return output
+    }
+
+    // MARK: - Image Conversion
+
+    /// Returns a copy of the image drawn in the upright orientation.
+    private func normalizedImage(_ image: UIImage) -> UIImage {
+        guard image.imageOrientation != .up else { return image }
+        UIGraphicsBeginImageContextWithOptions(image.size, false, image.scale)
+        image.draw(in: CGRect(origin: .zero, size: image.size))
+        defer { UIGraphicsEndImageContext() }
+        return UIGraphicsGetImageFromCurrentImageContext() ?? image
+    }
+
+    /// Convert UIImage to a flat RGB byte array at the given size, respecting EXIF orientation.
+    private func imageToRGB(_ image: UIImage, size: Int) throws -> [UInt8] {
+        let normalized = normalizedImage(image)
+
+        // Resize
+        let targetSize = CGSize(width: size, height: size)
+        UIGraphicsBeginImageContextWithOptions(targetSize, true, 1.0)
+        normalized.draw(in: CGRect(origin: .zero, size: targetSize))
+        guard let resized = UIGraphicsGetImageFromCurrentImageContext() else {
+            UIGraphicsEndImageContext()
+            throw ModelServiceError.imageEncodingFailed
+        }
+        UIGraphicsEndImageContext()
+
+        guard let cgImage = resized.cgImage else {
+            throw ModelServiceError.imageEncodingFailed
+        }
+
+        // Render to RGBA buffer
+        let width = size
+        let height = size
+        let bytesPerRow = width * 4
+        var rgba = [UInt8](repeating: 0, count: height * bytesPerRow)
+
+        guard let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
+              let ctx = CGContext(
+                data: &rgba,
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bytesPerRow: bytesPerRow,
+                space: colorSpace,
+                bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+              ) else {
+            throw ModelServiceError.imageEncodingFailed
+        }
+        ctx.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+        // Convert RGBA → RGB
+        var rgb = [UInt8](repeating: 0, count: width * height * 3)
+        for i in 0..<(width * height) {
+            rgb[i * 3 + 0] = rgba[i * 4 + 0]
+            rgb[i * 3 + 1] = rgba[i * 4 + 1]
+            rgb[i * 3 + 2] = rgba[i * 4 + 2]
+        }
+        return rgb
+    }
+}
